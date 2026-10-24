@@ -2,8 +2,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { EntryCard } from "@/components/entry-card";
 import { EmptyState, Eyebrow, PageSkeleton } from "@/components/states";
+import { CHAPTER_TITLES } from "@/lib/chapters";
 import { requireChild } from "@/lib/children";
-import { CHAPTER_TITLES, groupByMonth } from "@/lib/entries";
+import { groupByMonth } from "@/lib/entries";
 import { getMyEntries } from "@/lib/my-entries";
 import type { ChapterPeriod } from "@/types/archive";
 

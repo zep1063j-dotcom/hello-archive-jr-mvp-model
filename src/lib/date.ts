@@ -1,6 +1,4 @@
 // 날짜 계산·표시는 한국 시간(Asia/Seoul) 기준으로 이 파일에서만 처리한다.
-import type { ChapterPeriod } from "@/types/archive";
-
 const KST = "Asia/Seoul";
 
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
@@ -83,9 +81,3 @@ export function formatAge(birthDate: string, today: string): string {
   if (years === 0) return `${months}개월`;
   return months === 0 ? `만 ${years}세` : `만 ${years}세 ${months}개월`;
 }
-
-export const CHAPTER_MONTHS: Record<ChapterPeriod, number> = {
-  "1m": 1,
-  "3m": 3,
-  "1y": 12,
-};

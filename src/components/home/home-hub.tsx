@@ -1,17 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { EntryTimeline, PERIOD_TABS } from "@/components/home/entry-timeline";
+import Link from "next/link";
+import { EntryTimeline } from "@/components/home/entry-timeline";
 import { WeekComposer } from "@/components/home/week-composer";
 import { WeekStrip } from "@/components/home/week-strip";
 import { EmptyState } from "@/components/states";
 import { formatAge, weekStartOf } from "@/lib/date";
-import {
-  currentStreak,
-  filterByPeriod,
-  recentWeeks,
-  type PeriodFilter,
-} from "@/lib/entries";
+import { currentStreak, recentWeeks } from "@/lib/entries";
 import type { Child, Entry, WeeklyQuestion } from "@/types/archive";
 
 const WEEKS_SHOWN = 8;
@@ -30,7 +26,6 @@ export function HomeHub({
   entries: Entry[];
   today: string;
 }) {
-  const [filter, setFilter] = useState<PeriodFilter>("all");
   const [openId, setOpenId] = useState<string | null>(null);
 
   const thisWeekStart = weekStartOf(today);
@@ -38,10 +33,10 @@ export function HomeHub({
     entries.find((entry) => entry.question.weekStart === thisWeekStart) ?? null;
   const weeks = recentWeeks(entries, thisWeekStart, WEEKS_SHOWN);
   const streak = currentStreak(entries, thisWeekStart);
-  const visible = filterByPeriod(entries, filter, today);
+  // 최근 8주 현황 칸과 같은 범위의 기록만 보여준다. 전체는 아카이브에서 본다.
+  const recent = weeks.flatMap((week) => (week.entry ? [week.entry] : [])).reverse();
 
   function selectFromStrip(entryId: string) {
-    setFilter("all");
     setOpenId(entryId);
     // 목록이 다시 그려진 뒤 해당 기록으로 부드럽게 이동
     requestAnimationFrame(() => {
@@ -92,43 +87,31 @@ export function HomeHub({
       <section aria-labelledby="timeline">
         <div className="mb-4 flex items-end justify-between gap-3 border-b border-ink pb-2">
           <h2 id="timeline" className="font-serif text-base font-bold">
-            기록 모아보기
+            최근 기록
           </h2>
-          <div role="tablist" aria-label="기간" className="flex">
-            {PERIOD_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                type="button"
-                role="tab"
-                aria-selected={filter === tab.value}
-                onClick={() => setFilter(tab.value)}
-                className={`min-h-10 px-2.5 text-[13px] transition-colors ${
-                  filter === tab.value
-                    ? "border-b-2 border-brand font-bold text-ink"
-                    : "text-ink-soft hover:text-ink"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          <Link
+            href="/archive"
+            transitionTypes={["nav-forward"]}
+            className="min-h-10 content-center text-[13px] text-ink-soft underline underline-offset-4 hover:text-brand"
+          >
+            아카이브에서 전체 보기 →
+          </Link>
         </div>
-        <div role="tabpanel">
-          {entries.length === 0 ? (
-            <p className="border border-dashed border-ink-mute px-5 py-8 leading-relaxed text-ink-soft">
-              {question
+        {recent.length === 0 ? (
+          <p className="border border-dashed border-ink-mute px-5 py-8 leading-relaxed text-ink-soft">
+            {entries.length === 0
+              ? question
                 ? "아직 쌓인 기록이 없어요. 위 질문에 한두 줄만 적어도 첫 기록이 돼요."
-                : "아직 쌓인 기록이 없어요. 질문이 준비되면 한두 줄만 적어도 첫 기록이 돼요."}
-            </p>
-          ) : (
-            <EntryTimeline
-              entries={visible}
-              openId={openId}
-              onToggle={(id) => setOpenId((current) => (current === id ? null : id))}
-              emptyHint="다른 기간을 눌러 보거나, 이번 주 질문부터 기록해 보세요."
-            />
-          )}
-        </div>
+                : "아직 쌓인 기록이 없어요. 질문이 준비되면 한두 줄만 적어도 첫 기록이 돼요."
+              : "최근 8주에는 기록이 없어요. 지난 기록은 아카이브에서 볼 수 있어요."}
+          </p>
+        ) : (
+          <EntryTimeline
+            entries={recent}
+            openId={openId}
+            onToggle={(id) => setOpenId((current) => (current === id ? null : id))}
+          />
+        )}
       </section>
     </>
   );

@@ -1,34 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { EmptyState } from "@/components/states";
 import { toKstDateKey } from "@/lib/date";
-import { groupByMonth, type PeriodFilter } from "@/lib/entries";
+import { groupByMonth } from "@/lib/entries";
 import type { Entry } from "@/types/archive";
-
-export const PERIOD_TABS: { value: PeriodFilter; label: string }[] = [
-  { value: "all", label: "전체" },
-  { value: "1m", label: "1개월" },
-  { value: "3m", label: "3개월" },
-  { value: "1y", label: "1년" },
-];
 
 // 월별로 묶인 기록 목록. 항목을 누르면 그 자리에서 전문이 펼쳐진다.
 export function EntryTimeline({
   entries,
   openId,
   onToggle,
-  emptyHint,
 }: {
   entries: Entry[];
   openId: string | null;
   onToggle: (entryId: string) => void;
-  emptyHint: string;
 }) {
-  if (entries.length === 0) {
-    return <EmptyState title="이 기간에는 기록이 없어요" description={emptyHint} />;
-  }
-
   return (
     <div className="flex flex-col gap-7">
       {groupByMonth(entries).map((group) => (

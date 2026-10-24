@@ -15,6 +15,7 @@ src/
     child-validation.ts  # 자녀 입력 검증, 순수 TS (SESSION 04)
     entry-validation.ts  # 기록 본문 검증, 순수 TS (SESSION 05)
     my-entries.ts        # 이번 주 질문·내 기록 조회, 서버 전용 (SESSION 05)
+    chapters.ts          # 기간 챕터(월/분기/연) 구간·묶음, 순수 TS (SESSION 06)
   types/          # DB 타입 등
 supabase/
   migrations/     # SQL 마이그레이션 (SESSION 02)
@@ -34,9 +35,10 @@ docs/handoff/     # 인수인계 문서
 | `/onboarding` | 별도(`src/app/onboarding`, 내비 없는 화면) | 첫 로그인 시 자녀 등록. 자녀가 없으면 `requireChild()`가 `?next=`와 함께 이곳으로 보낸다. 구현됨 | 04 |
 | `/home` | app | 대시보드: 이번 주 질문 CTA, 최근 기록 | 01 |
 | `/write` | app | 이번 주 질문 + 기록 작성/수정, 홈의 이번 주 카드와 같은 컴포넌트를 펼쳐서 보여줌 (**이메일 딥링크 목적지**). 구현됨 | 05 |
-| `/archive` | app | 타임라인(최신순) | 06 |
+| `/archive` | app | 타임라인(최신 먼저, 월별 묶음) + 챕터 목록 링크. 구현됨 | 06 |
 | `/archive/[entryId]` | app | 기록 상세 + 수정·삭제(05 구현됨), 기간·정리는 06 | 05, 06 |
-| `/archive/chapters/[period]` | app | `1m` 미니챕터 / `3m` 이야기집 / `1y` 기록집 | 06 |
+| `/archive/chapters/[period]` | app | `1m` 미니챕터 / `3m` 이야기집 / `1y` 기록집의 **챕터 목록**(기록 있는 구간만). 구현됨 | 06 |
+| `/archive/chapters/[period]/[chapterKey]` | app | 챕터 상세. 키 `2026-10`·`2026-q4`·`2026`, 구간 `[start,end)` KST, 작성일 기준, 오래된 기록 먼저. 구현됨 (D-021) | 06 |
 | `/profile` | app | 자녀 조회·수정(`?edit=1`), 로그아웃 구현됨 / 이메일 수신 설정·데이터 삭제 요청은 07 | 04, 07 |
 | `/api/cron/weekly-email` | route handler | 예약 실행 진입점. `CRON_SECRET` Bearer 검증 | 07 |
 
@@ -108,7 +110,7 @@ docs/handoff/     # 인수인계 문서
 | **unique (child_id, weekly_question_id)** | | 같은 아이·같은 주 질문에 기록 중복 생성 방지 |
 
 - 인덱스: `(user_id, created_at desc)`, `(child_id, created_at desc)`.
-- 타임라인 정렬 기준은 `created_at desc`. 기간 묶음(1/3/12개월)의 기준일·경계는 SESSION 06에서 KST 기준 반개구간 `[start, end)`로 정의한다.
+- 타임라인 정렬 기준은 `created_at desc`. 기간 묶음은 달력 월·분기·연 고정 구간을 KST 반개구간 `[start, end)`로 정의하고 `created_at`의 KST 날짜로 소속을 정한다 (`src/lib/chapters.ts`, D-021).
 
 ### email_deliveries
 | 컬럼 | 타입 | 비고 |
@@ -143,5 +145,5 @@ docs/handoff/     # 인수인계 문서
 - 장기 방향(PWA → 앱, 사진·공유·오디오) 전환 시기와 방식은 베타 결과 후 (D-015).
 - 주간 이메일 발송 요일·시간 (SESSION 07, 사용자 결정).
 - 이메일 발송 서비스·발신 도메인 (SESSION 07).
-- 기간별 묶음의 기준일 정의 (SESSION 06).
+- (해결) 기간별 묶음의 기준: 달력 고정 구간·작성일 기준 (D-021).
 - 주간 질문 콘텐츠와 시드 분량: 12주 초안 시드가 있으나 문구·분량은 사용자 확정 필요(시드는 2026-12-14 주까지라 베타 전 추가 필요).

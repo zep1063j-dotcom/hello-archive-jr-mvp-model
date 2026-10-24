@@ -1,32 +1,6 @@
-// 기록 목록 가공(기간 필터·월별 묶음·주차 현황·연속 기록). 화면과 DB 양쪽에서 같은 규칙을 쓰도록 모아 둔다.
-// 기간 경계는 SESSION 06에서 확정한다. 지금은 (오늘 - N개월, 오늘] (KST, 오늘 포함).
-import { addDays, addMonths, CHAPTER_MONTHS, toKstDateKey } from "@/lib/date";
-import type { ChapterPeriod, Entry } from "@/types/archive";
-
-export type PeriodFilter = ChapterPeriod | "all";
-
-export function isChapterPeriod(value: string): value is ChapterPeriod {
-  return value === "1m" || value === "3m" || value === "1y";
-}
-
-export const CHAPTER_TITLES: Record<ChapterPeriod, { name: string; summary: string }> = {
-  "1m": { name: "1개월 미니챕터", summary: "최근 한 달의 기록" },
-  "3m": { name: "3개월 이야기집", summary: "최근 석 달의 기록" },
-  "1y": { name: "1년 기록집", summary: "최근 1년의 기록" },
-};
-
-export function filterByPeriod(
-  entries: Entry[],
-  period: PeriodFilter,
-  today: string,
-): Entry[] {
-  if (period === "all") return entries;
-  const start = addMonths(today, -CHAPTER_MONTHS[period]);
-  return entries.filter((entry) => {
-    const day = toKstDateKey(entry.createdAt);
-    return day > start && day <= today;
-  });
-}
+// 기록 목록 가공(월별 묶음·주차 현황·연속 기록). 기간 챕터의 경계는 `chapters.ts`에서 정의한다.
+import { addDays, toKstDateKey } from "@/lib/date";
+import type { Entry } from "@/types/archive";
 
 /** 최신순 기록을 KST 기준 연·월로 묶는다. */
 export function groupByMonth(
