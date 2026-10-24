@@ -8,6 +8,7 @@ import {
   type ChildFieldErrors,
 } from "@/lib/child-validation";
 import { todayKst } from "@/lib/date";
+import { saveEmailConsent } from "@/lib/email-consent";
 import { createClient } from "@/lib/supabase/server";
 
 // 자녀 폼 상태. 오류가 나도 입력한 값을 돌려줘 폼이 비워지지 않게 한다.
@@ -59,6 +60,12 @@ export async function createChild(
       console.error("[children] 자녀 등록 실패", error.code);
       return { values, error: "저장하지 못했어요. 잠시 후 다시 시도해 주세요." };
     }
+  }
+
+  // 주간 이메일 수신은 온보딩의 선택 항목(체크하지 않으면 받지 않음). 실패해도 등록은 막지 않고,
+  // 부모가 프로필에서 다시 켤 수 있다.
+  if (formData.get("emailConsent") === "on") {
+    await saveEmailConsent(supabase, user.id, true);
   }
 
   revalidatePath("/", "layout");

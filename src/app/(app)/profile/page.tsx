@@ -3,14 +3,16 @@ import { Suspense } from "react";
 import { signOut } from "@/app/actions/auth";
 import { Eyebrow, PageSkeleton } from "@/components/states";
 import { ChildForm } from "@/components/child-form";
+import { setEmailConsent } from "@/app/actions/settings";
 import { requireUser } from "@/lib/auth";
 import { earliestBirthDate } from "@/lib/child-validation";
 import { requireChild } from "@/lib/children";
+import { getMyEmailConsent } from "@/lib/email-consent";
 import { formatAge, formatKoreanDate, todayKst } from "@/lib/date";
 
 export const metadata = { title: "프로필 · Hello Archive jr" };
 
-// 자녀 정보 조회·수정과 로그아웃은 동작한다. 이메일 수신 설정과 데이터 삭제 요청은 SESSION 07에서 연결한다.
+// 자녀 정보 조회·수정, 주간 이메일 수신 설정, 로그아웃이 동작한다. 데이터 삭제 요청은 아직 연결하지 않았다.
 export default function ProfilePage(props: PageProps<"/profile">) {
   return (
     <>
@@ -23,18 +25,9 @@ export default function ProfilePage(props: PageProps<"/profile">) {
         <ChildSection searchParams={props.searchParams} />
       </Suspense>
 
-      <section aria-labelledby="email">
-        <h2
-          id="email"
-          className="border-b border-ink pb-2 font-serif text-lg font-bold"
-        >
-          주간 질문 이메일
-        </h2>
-        <p className="mt-4 leading-relaxed text-ink-soft">
-          매주 질문이 도착하면 메일로 알려 드려요. 수신 설정은 이메일 기능을 연결할
-          때 이곳에서 바꿀 수 있어요.
-        </p>
-      </section>
+      <Suspense fallback={<PageSkeleton rows={1} />}>
+        <EmailSection searchParams={props.searchParams} />
+      </Suspense>
 
       <section aria-labelledby="account" className="flex flex-col gap-2">
         <h2
@@ -135,6 +128,51 @@ async function ChildSection({
           </Link>
         </>
       )}
+    </section>
+  );
+}
+
+// 주간 이메일 수신 설정. 기본은 받지 않음이고, 켜면 다음 월요일(저녁 7시 무렵)부터 온다 (D-022).
+async function EmailSection({
+  searchParams,
+}: {
+  searchParams: PageProps<"/profile">["searchParams"];
+}) {
+  const consent = await getMyEmailConsent();
+  const { consent: result } = await searchParams;
+
+  return (
+    <section aria-labelledby="email">
+      <h2 id="email" className="border-b border-ink pb-2 font-serif text-lg font-bold">
+        주간 질문 이메일
+      </h2>
+      {result === "error" && (
+        <p role="alert" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
+          저장하지 못했어요. 잠시 후 다시 시도해 주세요.
+        </p>
+      )}
+      {(result === "on" || result === "off") && (
+        <p role="status" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
+          {result === "on"
+            ? "수신을 켰어요. 다음 월요일 저녁부터 이번 주 질문을 보내 드려요."
+            : "수신을 껐어요."}
+        </p>
+      )}
+      <p className="mt-4 leading-relaxed text-ink-soft">
+        {consent
+          ? "받는 중이에요. 매주 월요일 저녁 7시 무렵에 이번 주 질문을 보내 드려요."
+          : "받지 않고 있어요. 켜면 매주 월요일 저녁 7시 무렵에 이번 주 질문을 보내 드려요."}
+      </p>
+      <form action={setEmailConsent} className="mt-4">
+        <input type="hidden" name="consent" value={consent ? "0" : "1"} />
+        <button
+          type="submit"
+          className="flex min-h-12 w-full items-center justify-between border border-ink px-5 font-semibold hover:bg-ink hover:text-paper"
+        >
+          {consent ? "이메일 받지 않기" : "이메일 받기"}
+          <span aria-hidden>↗</span>
+        </button>
+      </form>
     </section>
   );
 }

@@ -23,6 +23,8 @@ npm run build
 npm run test:unit  # 순수 로직 단위 테스트 (DB 불필요, SESSION 04~)
 npm run test:rls   # DB 교차 접근 테스트 (.env.local + 개발용 Supabase 필요, SESSION 02~)
 npm run test:children  # 자녀 프로필 앱 쿼리·동시 등록 테스트 (개발용 Supabase, 마이그레이션 3개 적용 필요)
+npm run test:entries   # 기록 앱 쿼리·두 계정 교차·동시 insert (개발용 Supabase)
+npm run test:weekly-email  # 주간 이메일 발송 작업(가짜 발송기, 실제 메일 없음)·수신 동의 (개발용 Supabase)
 ```
 
 ## 환경 변수 (이름만 — `.env.example` 참고)
@@ -30,7 +32,7 @@ npm run test:children  # 자녀 프로필 앱 쿼리·동시 등록 테스트 (�
 |---|---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | 공개 | 02~ | Supabase 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 공개(RLS로 보호) | 02~ | publishable(anon) 키 |
-| `SUPABASE_SERVICE_ROLE_KEY` | **서버 전용** | 07 | RLS 우회 가능. 절대 클라이언트·저장소에 노출 금지 |
+| `SUPABASE_SERVICE_ROLE_KEY` | **서버 전용** | 07(예약 실행), 테스트 | RLS 우회 가능. 절대 클라이언트·저장소에 노출 금지 |
 | `NEXT_PUBLIC_APP_URL` | 공개 | 07 | 이메일 링크 기준 주소. 코드 방식 로그인(SESSION 03)은 쓰지 않는다 |
 | `RESEND_API_KEY` | **서버 전용** | 07 | 이메일 발송 |
 | `EMAIL_FROM` | 서버 | 07 | 발신 주소 (도메인 인증 필요) |
@@ -71,6 +73,13 @@ npm run test:children  # 자녀 프로필 앱 쿼리·동시 등록 테스트 (�
 5. 저장 후 **몇 분간은 옛 템플릿으로 발송될 수 있다**. 제목이 `Your sign-in link`(링크만)이면 시간이 지난 뒤 다시 시험한다.
 6. **도메인이 없으면 Resend 가입 이메일에만 발송**된다. 베타 전에 도메인을 구해 Resend에서 인증하고 발신 주소를 바꾼다. 정식(베타용) Supabase 프로젝트에도 2~4번을 다시 한다.
 7. 확인: 로그인 화면(`/login`)에서 본인 이메일로 코드를 받아 로그인하고 `/profile`에서 로그아웃. 같은 주소로는 1분에 한 번만 보낼 수 있다.
+
+## 주간 이메일 (SESSION 07) — 정책은 D-022
+- **발송**: 전원 월요일 19:00 KST, 수신 동의자만, 가입·동의가 그 주 월요일 19시 이후면 다음 월요일부터. 이번 주 이미 기록한 부모는 건너뜀.
+- **필요한 값(사용자가 `.env.local`에 직접 입력, 채팅에 붙이지 않는다)**: `RESEND_API_KEY`(Resend에서 발송 권한 키), `EMAIL_FROM`(발신 주소. 도메인 인증 전에는 Resend 테스트 발신 주소이고 Resend 가입 이메일에만 발송됨), `CRON_SECRET`(긴 무작위 문자열), `NEXT_PUBLIC_APP_URL`(메일 링크 기준 주소). 인증 메일용 SMTP 설정(위)과는 별개다.
+- **로컬에서 크론 라우트 호출**: 서버를 띄운 뒤 `curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/weekly-email` (헤더가 없거나 틀리면 401, 응답은 집계 숫자만). 월요일 19:00 이전에는 `too_early`, 동의가 이번 주 월요일 19시 이후면 대상이 아니다. `next dev`는 크론을 실행하지 않으므로 직접 호출한다.
+- **Vercel Cron**: `vercel.json`의 `0 10 * * 1,2`(UTC 기준 월·화 10:00 = 한국 19:00, 화요일은 누락·실패 보충). Vercel 문서(2026-10 조회): Hobby는 하루 1회까지, 지정한 시 안의 임의 시각(19:00~19:59), 실패해도 재시도 없음, 드물게 누락·중복 실행. 배포 후 UTC 해석과 `CRON_SECRET` 동작을 확인해야 한다(미검증). Vercel 프로젝트에 `CRON_SECRET`을 같은 이름으로 등록한다.
+- 발송 이력은 DB `email_deliveries`(status·attempts·error_code)에 남는다 (service role만 접근).
 
 ## 배포 (SESSION 08에서 작성)
 Vercel 예정. 아직 배포하지 않았다.

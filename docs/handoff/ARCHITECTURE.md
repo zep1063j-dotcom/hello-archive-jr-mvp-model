@@ -16,6 +16,11 @@ src/
     entry-validation.ts  # 기록 본문 검증, 순수 TS (SESSION 05)
     my-entries.ts        # 이번 주 질문·내 기록 조회, 서버 전용 (SESSION 05)
     chapters.ts          # 기간 챕터(월/분기/연) 구간·묶음, 순수 TS (SESSION 06)
+    weekly-email.ts      # 주간 이메일 규칙(발송 시각·대상·재시도·본문), 순수 TS (SESSION 07)
+    weekly-email-job.ts  # 발송 작업: DB·발송기 주입, 멱등·보정형 (SESSION 07)
+    resend.ts            # Resend REST 발송, 서버 전용 (SESSION 07)
+    email-consent.ts     # 수신 동의 조회·저장(사용자 세션), 서버 전용 (SESSION 07)
+    supabase/admin.ts    # service role 클라이언트. 예약 실행에서만 (SESSION 07)
   types/          # DB 타입 등
 supabase/
   migrations/     # SQL 마이그레이션 (SESSION 02)
@@ -39,8 +44,8 @@ docs/handoff/     # 인수인계 문서
 | `/archive/[entryId]` | app | 기록 상세 + 수정·삭제(05 구현됨), 기간·정리는 06 | 05, 06 |
 | `/archive/chapters/[period]` | app | `1m` 미니챕터 / `3m` 이야기집 / `1y` 기록집의 **챕터 목록**(기록 있는 구간만). 구현됨 | 06 |
 | `/archive/chapters/[period]/[chapterKey]` | app | 챕터 상세. 키 `2026-10`·`2026-q4`·`2026`, 구간 `[start,end)` KST, 작성일 기준, 오래된 기록 먼저. 구현됨 (D-021) | 06 |
-| `/profile` | app | 자녀 조회·수정(`?edit=1`), 로그아웃 구현됨 / 이메일 수신 설정·데이터 삭제 요청은 07 | 04, 07 |
-| `/api/cron/weekly-email` | route handler | 예약 실행 진입점. `CRON_SECRET` Bearer 검증 | 07 |
+| `/profile` | app | 자녀 조회·수정(`?edit=1`), 주간 이메일 수신 켜기/끄기, 로그아웃 구현됨 / 데이터 삭제 요청은 미구현 | 04, 07 |
+| `/api/cron/weekly-email` | route handler | 예약 실행 진입점(`vercel.json`: 월·화 10:00 UTC = 19:00 KST). `CRON_SECRET` Bearer 검증, 집계 JSON만 응답. 구현됨, 실제 발송·Cron 동작은 미검증 (D-022) | 07 |
 
 > **SESSION 03 구현 현황**: `/login`, `src/proxy.ts`(보호 라우트), `(app)` 레이아웃 서버 검증, 프로필 로그아웃. 보호 대상 matcher: `/login`, `/onboarding`, `/home`, `/write`, `/archive/:path*`, `/profile`.
 >
@@ -143,7 +148,7 @@ docs/handoff/     # 인수인계 문서
 - (해결) 인증 방식: 일회용 코드로 확정 (D-016).
 - 발신 도메인: 베타 전 필요 (D-017). 정식 Supabase 프로젝트·배포 주소 (SESSION 08).
 - 장기 방향(PWA → 앱, 사진·공유·오디오) 전환 시기와 방식은 베타 결과 후 (D-015).
-- 주간 이메일 발송 요일·시간 (SESSION 07, 사용자 결정).
-- 이메일 발송 서비스·발신 도메인 (SESSION 07).
+- (해결) 주간 이메일 발송: 전원 월요일 19:00 KST, 동의자만, 가입 주 건너뜀 (D-022). 19시가 최적인지는 가설.
+- 이메일 발송 서비스: Resend(REST). 발신 도메인은 미확보 (D-017).
 - (해결) 기간별 묶음의 기준: 달력 고정 구간·작성일 기준 (D-021).
 - 주간 질문 콘텐츠와 시드 분량: 12주 초안 시드가 있으나 문구·분량은 사용자 확정 필요(시드는 2026-12-14 주까지라 베타 전 추가 필요).

@@ -100,6 +100,22 @@ export function ChildForm({
         </p>
       </div>
 
+      {mode === "create" && (
+        <label className="flex items-start gap-3 leading-relaxed">
+          <input
+            type="checkbox"
+            name="emailConsent"
+            className="mt-1.5 size-5 shrink-0 accent-brand"
+          />
+          <span>
+            <span className="block font-semibold">매주 월요일 저녁, 이번 주 질문을 이메일로 받을래요</span>
+            <span className="block text-sm text-ink-soft">
+              선택 사항이에요. 언제든 프로필에서 끌 수 있어요.
+            </span>
+          </span>
+        </label>
+      )}
+
       <div id={formErrorId} aria-live="polite">
         {state.error && (
           <p role="alert" className="border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
