@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ViewTransition } from "react";
+import { Suspense, ViewTransition } from "react";
 import { Logo } from "@/components/logo";
 
 const NAV_ITEMS = [
@@ -16,9 +16,22 @@ const NAV_ITEMS = [
   { href: "/profile", label: "프로필", match: (p: string) => p === "/profile" },
 ] as const;
 
-// 상단 고정 헤더. 모바일은 로고 줄 아래에 메뉴 줄이 한 번 더, md 이상은 한 줄에 로고와 메뉴가 같이 들어간다.
+// `/archive/[entryId]`처럼 매개변수를 미리 알 수 없는 경로에서는 usePathname이 요청 시점에 정해져 Suspense가 필요하다.
+// 그동안은 선택 표시 없는 같은 모양의 헤더를 보여준다.
 export function AppNav() {
-  const pathname = usePathname();
+  return (
+    <Suspense fallback={<NavBar pathname="" />}>
+      <CurrentNavBar />
+    </Suspense>
+  );
+}
+
+function CurrentNavBar() {
+  return <NavBar pathname={usePathname()} />;
+}
+
+// 상단 고정 헤더. 모바일은 로고 줄 아래에 메뉴 줄이 한 번 더, md 이상은 한 줄에 로고와 메뉴가 같이 들어간다.
+function NavBar({ pathname }: { pathname: string }) {
   const currentIndex = NAV_ITEMS.findIndex((item) => item.match(pathname));
 
   return (

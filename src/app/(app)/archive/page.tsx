@@ -1,36 +1,27 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { EntryCard } from "@/components/entry-card";
-import { EmptyState, ErrorState, Eyebrow, PageSkeleton } from "@/components/states";
+import { EmptyState, Eyebrow, PageSkeleton } from "@/components/states";
 import { requireChild } from "@/lib/children";
-import { groupByMonth } from "@/lib/entries";
-import { CHAPTER_TITLES, getMockEntries, parseScenario } from "@/lib/mock-data";
+import { CHAPTER_TITLES, groupByMonth } from "@/lib/entries";
+import { getMyEntries } from "@/lib/my-entries";
 import type { ChapterPeriod } from "@/types/archive";
 
 export const metadata = { title: "아카이브 · Hello Archive jr" };
 
 const PERIODS: ChapterPeriod[] = ["1m", "3m", "1y"];
 
-export default function ArchivePage(props: PageProps<"/archive">) {
+export default function ArchivePage() {
   return (
     <Suspense fallback={<PageSkeleton rows={4} />}>
-      <ArchiveContent searchParams={props.searchParams} />
+      <ArchiveContent />
     </Suspense>
   );
 }
 
-async function ArchiveContent({
-  searchParams,
-}: {
-  searchParams: PageProps<"/archive">["searchParams"];
-}) {
-  await requireChild("/archive");
-  const scenario = parseScenario((await searchParams).mock);
-  if (scenario === "error") {
-    return <ErrorState title="기록을 불러오지 못했어요" />;
-  }
-
-  const entries = getMockEntries(scenario);
+async function ArchiveContent() {
+  const child = await requireChild("/archive");
+  const entries = await getMyEntries(child.id);
 
   return (
     <>

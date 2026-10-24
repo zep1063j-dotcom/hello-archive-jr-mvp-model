@@ -1,64 +1,47 @@
 import { Suspense } from "react";
-import { ErrorState, Eyebrow, PageSkeleton } from "@/components/states";
-import { WriteForm } from "@/components/write-form";
+import { WeekComposer } from "@/components/home/week-composer";
+import { EmptyState, PageSkeleton } from "@/components/states";
 import { requireChild } from "@/lib/children";
-import { formatKoreanDate, formatWeekLabel } from "@/lib/date";
-import {
-  getMockThisWeekEntry,
-  parseScenario,
-  thisWeekQuestion,
-} from "@/lib/mock-data";
+import { weekStartOf, todayKst } from "@/lib/date";
+import { getMyEntries, getThisWeekQuestion } from "@/lib/my-entries";
 
 export const metadata = { title: "기록 쓰기 · Hello Archive jr" };
 
-// 이메일 딥링크 목적지. 같은 주 재작성은 새 기록이 아니라 수정으로 처리한다 (D-005).
-export default function WritePage(props: PageProps<"/write">) {
+// 이메일 딥링크 목적지(안정적인 공개 URL, D-015). 홈의 이번 주 카드와 같은 컴포넌트를 펼친 채로 보여준다.
+// 같은 주 재작성은 새 기록이 아니라 수정으로 처리한다 (D-005).
+export default function WritePage() {
   return (
     <Suspense fallback={<PageSkeleton rows={2} />}>
-      <WriteContent searchParams={props.searchParams} />
+      <WriteContent />
     </Suspense>
   );
 }
 
-async function WriteContent({
-  searchParams,
-}: {
-  searchParams: PageProps<"/write">["searchParams"];
-}) {
-  await requireChild("/write");
-  const params = await searchParams;
-  const scenario = parseScenario(params.mock);
-  if (scenario === "error") {
-    return <ErrorState title="이번 주 질문을 불러오지 못했어요" />;
+async function WriteContent() {
+  const child = await requireChild("/write");
+  const [question, entries] = await Promise.all([
+    getThisWeekQuestion(),
+    getMyEntries(child.id),
+  ]);
+
+  if (!question) {
+    return (
+      <EmptyState
+        title="이번 주 질문을 준비하고 있어요"
+        description="질문이 준비되면 이곳에서 바로 기록할 수 있어요."
+        action={{ href: "/home", label: "홈으로" }}
+      />
+    );
   }
 
-  const existing = getMockThisWeekEntry(scenario);
+  const thisWeekStart = weekStartOf(todayKst());
+  const existing =
+    entries.find((entry) => entry.question.weekStart === thisWeekStart) ?? null;
 
   return (
     <>
-      <header className="border-b border-ink pb-6">
-        <Eyebrow>{formatWeekLabel(thisWeekQuestion.weekStart)}의 질문</Eyebrow>
-        <h1 className="mt-4 font-serif text-[1.75rem] font-bold leading-[1.5]">
-          {thisWeekQuestion.body}
-        </h1>
-        {thisWeekQuestion.hint && (
-          <p className="mt-4 leading-relaxed text-ink-soft">
-            {thisWeekQuestion.hint}
-          </p>
-        )}
-      </header>
-
-      {existing && (
-        <p className="-mt-3 text-sm text-ink-soft">
-          {formatKoreanDate(existing.createdAt)}에 쓴 기록이에요. 고쳐서 다시 저장할 수 있어요.
-        </p>
-      )}
-
-      <WriteForm
-        key={scenario}
-        initialBody={existing?.body}
-        simulateError={params.fail === "1"}
-      />
+      <h1 className="sr-only">이번 주 기록 쓰기</h1>
+      <WeekComposer key={question.id} question={question} entry={existing} defaultOpen />
     </>
   );
 }

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { EntryTimeline, PERIOD_TABS } from "@/components/home/entry-timeline";
 import { WeekComposer } from "@/components/home/week-composer";
 import { WeekStrip } from "@/components/home/week-strip";
-import { formatAge } from "@/lib/date";
+import { EmptyState } from "@/components/states";
+import { formatAge, weekStartOf } from "@/lib/date";
 import {
   currentStreak,
   filterByPeriod,
@@ -16,51 +17,28 @@ import type { Child, Entry, WeeklyQuestion } from "@/types/archive";
 const WEEKS_SHOWN = 8;
 
 // 메인 화면 하나에서 쓰기 · 최근 8주 현황 · 기간별 열람을 모두 한다.
-// 기록 상태는 이 화면의 메모리에만 있다(새로고침하면 초기화). 실제 저장은 SESSION 05.
+// 기록은 서버에서 읽은 값이고, 저장하면 서버 액션이 데이터를 갱신해 props로 다시 내려온다.
 export function HomeHub({
   child,
   question,
-  initialEntries,
+  entries,
   today,
-  simulateError,
 }: {
   child: Child;
-  question: WeeklyQuestion;
-  initialEntries: Entry[];
+  /** 이번 주 질문. 해당 주 질문이 없으면 null */
+  question: WeeklyQuestion | null;
+  entries: Entry[];
   today: string;
-  simulateError: boolean;
 }) {
-  const [entries, setEntries] = useState(initialEntries);
   const [filter, setFilter] = useState<PeriodFilter>("all");
   const [openId, setOpenId] = useState<string | null>(null);
 
+  const thisWeekStart = weekStartOf(today);
   const thisWeekEntry =
-    entries.find((entry) => entry.question.weekStart === question.weekStart) ?? null;
-  const weeks = recentWeeks(entries, question.weekStart, WEEKS_SHOWN);
-  const streak = currentStreak(entries, question.weekStart);
+    entries.find((entry) => entry.question.weekStart === thisWeekStart) ?? null;
+  const weeks = recentWeeks(entries, thisWeekStart, WEEKS_SHOWN);
+  const streak = currentStreak(entries, thisWeekStart);
   const visible = filterByPeriod(entries, filter, today);
-
-  function saveThisWeek(body: string) {
-    // 목 단계: 시각은 고정된 "오늘"의 저녁으로 둔다 (실제 시각 기록은 DB 연결 후).
-    const now = `${today}T21:00:00+09:00`;
-    setEntries((prev) =>
-      thisWeekEntry
-        ? prev.map((entry) =>
-            entry.id === thisWeekEntry.id ? { ...entry, body, updatedAt: now } : entry,
-          )
-        : [
-            {
-              id: `entry-${question.weekStart}`,
-              question,
-              body,
-              createdAt: now,
-              updatedAt: now,
-            },
-            ...prev,
-          ],
-    );
-    setOpenId(null);
-  }
 
   function selectFromStrip(entryId: string) {
     setFilter("all");
@@ -95,12 +73,14 @@ export function HomeHub({
         </p>
       </header>
 
-      <WeekComposer
-        question={question}
-        entry={thisWeekEntry}
-        simulateError={simulateError}
-        onSave={saveThisWeek}
-      />
+      {question ? (
+        <WeekComposer key={question.id} question={question} entry={thisWeekEntry} />
+      ) : (
+        <EmptyState
+          title="이번 주 질문을 준비하고 있어요"
+          description="질문이 준비되면 이곳에 나타나요. 지난 기록은 아래에서 볼 수 있어요."
+        />
+      )}
 
       <section aria-labelledby="weeks">
         <h2 id="weeks" className="mb-3 font-serif text-base font-bold">
@@ -136,7 +116,9 @@ export function HomeHub({
         <div role="tabpanel">
           {entries.length === 0 ? (
             <p className="border border-dashed border-ink-mute px-5 py-8 leading-relaxed text-ink-soft">
-              아직 쌓인 기록이 없어요. 위 질문에 한두 줄만 적어도 첫 기록이 돼요.
+              {question
+                ? "아직 쌓인 기록이 없어요. 위 질문에 한두 줄만 적어도 첫 기록이 돼요."
+                : "아직 쌓인 기록이 없어요. 질문이 준비되면 한두 줄만 적어도 첫 기록이 돼요."}
             </p>
           ) : (
             <EntryTimeline

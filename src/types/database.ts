@@ -65,7 +65,16 @@ export type Database = {
         };
         // 생성 후에는 본문만 수정할 수 있다.
         Update: { body?: string };
-        Relationships: [];
+        // 기록 조회에서 질문을 함께 가져오는 조인(embed)에 필요하다.
+        Relationships: [
+          {
+            foreignKeyName: "entries_weekly_question_id_fkey";
+            columns: ["weekly_question_id"];
+            isOneToOne: false;
+            referencedRelation: "weekly_questions";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       email_deliveries: {
         Row: {

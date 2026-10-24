@@ -1,6 +1,6 @@
 # ARCHITECTURE — 라우팅 · 화면 구조 · 데이터 모델 (설계안)
 
-> 상태: SESSION 00 설계안. **SESSION 01에서 화면(목 데이터), SESSION 02에서 DB 스키마·RLS, SESSION 03에서 인증(일회용 코드)·보호 라우트 구현·검증됨** (4~5절). API·화면의 DB 연결은 아직 없다. 각 세션에서 구현하며 달라지면 이 문서와 `DECISIONS.md`를 함께 갱신한다.
+> 상태: SESSION 00 설계안. **SESSION 01에서 화면(목 데이터), SESSION 02에서 DB 스키마·RLS, SESSION 03에서 인증(일회용 코드)·보호 라우트 구현·검증됨** (4~5절). 질문·기록 화면의 DB 연결은 SESSION 05에서 완료(목 데이터 제거, D-020). `/api/*`는 아직 없다. 각 세션에서 구현하며 달라지면 이 문서와 `DECISIONS.md`를 함께 갱신한다.
 
 ## 1. 폴더 구조 (현재 생성됨)
 ```
@@ -13,6 +13,8 @@ src/
     auth.ts       # requireUser(), safeNextPath() (SESSION 03)
     children.ts   # getMyChild(), requireChild() (SESSION 04)
     child-validation.ts  # 자녀 입력 검증, 순수 TS (SESSION 04)
+    entry-validation.ts  # 기록 본문 검증, 순수 TS (SESSION 05)
+    my-entries.ts        # 이번 주 질문·내 기록 조회, 서버 전용 (SESSION 05)
   types/          # DB 타입 등
 supabase/
   migrations/     # SQL 마이그레이션 (SESSION 02)
@@ -31,9 +33,9 @@ docs/handoff/     # 인수인계 문서
 | ~~`/auth/expired`~~ | — | **만들지 않음**: 만료·오류는 폼 안내 + 코드 다시 받기 | — |
 | `/onboarding` | 별도(`src/app/onboarding`, 내비 없는 화면) | 첫 로그인 시 자녀 등록. 자녀가 없으면 `requireChild()`가 `?next=`와 함께 이곳으로 보낸다. 구현됨 | 04 |
 | `/home` | app | 대시보드: 이번 주 질문 CTA, 최근 기록 | 01 |
-| `/write` | app | 이번 주 질문 + 기록 작성/수정 (**이메일 딥링크 목적지**) | 05 |
+| `/write` | app | 이번 주 질문 + 기록 작성/수정, 홈의 이번 주 카드와 같은 컴포넌트를 펼쳐서 보여줌 (**이메일 딥링크 목적지**). 구현됨 | 05 |
 | `/archive` | app | 타임라인(최신순) | 06 |
-| `/archive/[entryId]` | app | 기록 상세 | 06 |
+| `/archive/[entryId]` | app | 기록 상세 + 수정·삭제(05 구현됨), 기간·정리는 06 | 05, 06 |
 | `/archive/chapters/[period]` | app | `1m` 미니챕터 / `3m` 이야기집 / `1y` 기록집 | 06 |
 | `/profile` | app | 자녀 조회·수정(`?edit=1`), 로그아웃 구현됨 / 이메일 수신 설정·데이터 삭제 요청은 07 | 04, 07 |
 | `/api/cron/weekly-email` | route handler | 예약 실행 진입점. `CRON_SECRET` Bearer 검증 | 07 |
@@ -142,4 +144,4 @@ docs/handoff/     # 인수인계 문서
 - 주간 이메일 발송 요일·시간 (SESSION 07, 사용자 결정).
 - 이메일 발송 서비스·발신 도메인 (SESSION 07).
 - 기간별 묶음의 기준일 정의 (SESSION 06).
-- 주간 질문 콘텐츠와 시드 분량: 12주 초안 시드가 있으나 문구·분량은 사용자 확정 필요 (SESSION 05 전).
+- 주간 질문 콘텐츠와 시드 분량: 12주 초안 시드가 있으나 문구·분량은 사용자 확정 필요(시드는 2026-12-14 주까지라 베타 전 추가 필요).

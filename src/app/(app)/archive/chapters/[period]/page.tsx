@@ -4,17 +4,15 @@ import { Suspense } from "react";
 import { EntryCard } from "@/components/entry-card";
 import { EmptyState, Eyebrow, PageSkeleton } from "@/components/states";
 import { requireChild } from "@/lib/children";
-import {
-  CHAPTER_TITLES,
-  getMockChapterEntries,
-  isChapterPeriod,
-} from "@/lib/mock-data";
+import { todayKst } from "@/lib/date";
+import { CHAPTER_TITLES, filterByPeriod, isChapterPeriod } from "@/lib/entries";
+import { getMyEntries } from "@/lib/my-entries";
 
 export function generateStaticParams() {
   return [{ period: "1m" }, { period: "3m" }, { period: "1y" }];
 }
 
-// 조회용 묶음. 기간 경계·기준일은 SESSION 06에서 정의한다 (여기서는 목 필터).
+// 조회용 묶음. 기간 경계·기준일은 SESSION 06에서 정의한다 (지금은 `filterByPeriod`의 임시 기준).
 export default function ChapterPage(
   props: PageProps<"/archive/chapters/[period]">,
 ) {
@@ -30,12 +28,12 @@ async function Chapter({
 }: {
   params: PageProps<"/archive/chapters/[period]">["params"];
 }) {
-  await requireChild("/archive");
+  const child = await requireChild("/archive");
   const { period } = await params;
   if (!isChapterPeriod(period)) notFound();
 
   const { name, summary } = CHAPTER_TITLES[period];
-  const entries = getMockChapterEntries(period);
+  const entries = filterByPeriod(await getMyEntries(child.id), period, todayKst());
 
   return (
     <>

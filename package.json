@@ -10,6 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test:unit": "node --test src/lib/*.test.ts",
     "test:children": "node --env-file=.env.local --test supabase/tests/children-app.test.ts",
+    "test:entries": "node --env-file=.env.local --test supabase/tests/entries-app.test.ts",
     "test:rls": "node --env-file=.env.local --test supabase/tests/rls.test.ts"
   },
   "dependencies": {

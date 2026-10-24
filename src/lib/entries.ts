@@ -5,6 +5,16 @@ import type { ChapterPeriod, Entry } from "@/types/archive";
 
 export type PeriodFilter = ChapterPeriod | "all";
 
+export function isChapterPeriod(value: string): value is ChapterPeriod {
+  return value === "1m" || value === "3m" || value === "1y";
+}
+
+export const CHAPTER_TITLES: Record<ChapterPeriod, { name: string; summary: string }> = {
+  "1m": { name: "1개월 미니챕터", summary: "최근 한 달의 기록" },
+  "3m": { name: "3개월 이야기집", summary: "최근 석 달의 기록" },
+  "1y": { name: "1년 기록집", summary: "최근 1년의 기록" },
+};
+
 export function filterByPeriod(
   entries: Entry[],
   period: PeriodFilter,

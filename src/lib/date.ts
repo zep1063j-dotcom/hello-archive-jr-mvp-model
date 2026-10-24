@@ -58,6 +58,13 @@ export function addDays(dateKey: string, days: number): string {
     .slice(0, 10);
 }
 
+/** 날짜(YYYY-MM-DD)가 속한 주의 월요일. 주간 질문의 `week_start` 기준이다 (한국 시간 날짜를 넘긴다). */
+export function weekStartOf(dateKey: string): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay(); // 0=일 … 6=토
+  return addDays(dateKey, -((weekday + 6) % 7));
+}
+
 /** "10/19" 형태의 짧은 월/일 */
 export function formatMonthDay(dateKey: string): string {
   const [, month, day] = dateKey.split("-").map(Number);

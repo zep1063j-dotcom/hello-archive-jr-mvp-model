@@ -93,12 +93,3 @@ export function PageSkeleton({ rows = 3 }: { rows?: number }) {
     </div>
   );
 }
-
-/** 목 데이터 단계임을 알리는 작은 안내 (SESSION 02에서 제거) */
-export function MockNotice({ children }: { children: ReactNode }) {
-  return (
-    <p className="border-b border-line pb-3 text-[11px] leading-relaxed tracking-wide text-ink-mute">
-      {children}
-    </p>
-  );
-}

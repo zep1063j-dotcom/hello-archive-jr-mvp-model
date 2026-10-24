@@ -1,14 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { EntryDetailBody } from "@/components/entry-detail-body";
 import { Eyebrow, PageSkeleton } from "@/components/states";
 import { requireChild } from "@/lib/children";
 import { formatKoreanDate, formatWeekLabel } from "@/lib/date";
-import { allMockEntryIds, findMockEntry } from "@/lib/mock-data";
-
-export function generateStaticParams() {
-  return allMockEntryIds().map((entryId) => ({ entryId }));
-}
+import { getMyEntry } from "@/lib/my-entries";
 
 export default function EntryDetailPage(props: PageProps<"/archive/[entryId]">) {
   return (
@@ -25,7 +22,8 @@ async function EntryDetail({
 }) {
   await requireChild("/archive");
   const { entryId } = await params;
-  const entry = findMockEntry(entryId);
+  // 내 기록이 아니거나 없는 id는 구분 없이 404 (타인 기록의 존재 여부를 알려주지 않는다).
+  const entry = await getMyEntry(entryId);
   if (!entry) notFound();
 
   const edited = entry.updatedAt !== entry.createdAt;
@@ -46,9 +44,7 @@ async function EntryDetail({
             {entry.question.body}
           </h1>
         </header>
-        <p className="mt-6 whitespace-pre-wrap font-serif text-[1.0625rem] leading-[2]">
-          {entry.body}
-        </p>
+        <EntryDetailBody entryId={entry.id} body={entry.body} />
         <footer className="mt-10 border-t border-line pt-4 text-xs leading-relaxed text-ink-mute">
           <p>
             작성{" "}
@@ -66,7 +62,6 @@ async function EntryDetail({
           )}
         </footer>
       </article>
-      {/* 수정·삭제는 SESSION 05에서 연결한다. */}
     </>
   );
 }
