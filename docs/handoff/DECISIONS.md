@@ -74,3 +74,14 @@
 - 결정: 큰 면적에는 검정을 쓰지 않는다. 검정은 글씨와 가는 선에만, 큰 면은 종이색(`--paper`)·살구빛(`--blush #f6e5da`, 테두리 `--blush-deep #ecd0c0`)을 쓴다. 레드는 버튼·체크·선택 표시 같은 포인트에만 쓰고, 버튼 호버는 검정이 아니라 진한 레드(`--brand-deep #b32432`). 홈의 이번 주 질문 카드, 연속 기록 박스, 아이 이니셜(원형)에 적용. 오류 문구 색도 레드 계열로 통일.
 - D-008의 "검정 질문 블록" 항목을 번복한다. 로고 아이콘(`icon.svg`)의 검정 바탕은 유지.
 - 확인 환경: 프로덕션 빌드(`next start`)로 확인. 다른 채팅의 dev 서버(PID 1841)는 새 CSS를 반영하지 않는다.
+
+## D-013 · 2026-10-24 · SESSION 02 DB 구현 방식 (D-005 확정)
+- 환경: **개발용 원격 Supabase 프로젝트** + SQL Editor 수동 적용. 이 PC에는 Supabase CLI·Docker가 없다. 실서비스(베타) 프로젝트와 분리한다.
+- 생년월일: **연·월·일 전체**를 `birth_date date`로 저장한다 (사용자 결정). 월 단위 최소화안은 채택하지 않았다. 개인정보 처리방침 문구 작성 시 수집 항목에 포함한다.
+- 이중 방어: RLS 정책(행) + **컬럼 단위 GRANT**. 기록은 생성 후 `body`만 수정 가능(user_id·child_id·weekly_question_id·created_at 변경 불가), 자녀는 `nickname`·`birth_date`만, `created_at`/`updated_at`/`consent_updated_at`은 클라이언트가 못 건드린다(트리거로 서버가 기록). `anon`은 모든 테이블 권한 없음, `email_deliveries`는 anon/authenticated 권한 없음(service role 전용), `weekly_questions`는 authenticated select만.
+- `birth_date` 미래 불가는 한국 시간 기준(`now() at time zone 'Asia/Seoul'`) CHECK로 DB에서 강제한다.
+- 이번 주 질문이 아닌 과거 질문에도 기록을 쓸 수 있는지는 **DB가 막지 않는다**. 이번 주 질문만 허용하는 규칙은 SESSION 05의 서버 코드에서 검증한다.
+- 자녀 1명 제한도 DB가 아니라 SESSION 04 앱 로직에서 한다 (D-005 유지).
+- `parent_settings` 행은 트리거로 자동 생성하지 않는다(auth 스키마 트리거 회피). 첫 로그인/설정 저장 시 앱이 upsert한다(SESSION 03/07).
+- `src/types/database.ts`는 CLI 없이 **손으로 작성**했다. 마이그레이션과 어긋나지 않게 같이 고친다.
+- 목 데이터 교체 시점: DB 조회는 로그인(RLS의 `auth.uid()`)이 있어야 가능하므로 `mock-data.ts` 교체는 SESSION 03(인증) 이후 04~05에서 한다. SESSION 02에서는 화면을 바꾸지 않았다.

@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "test:rls": "node --env-file=.env.local --test supabase/tests/rls.test.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0"
