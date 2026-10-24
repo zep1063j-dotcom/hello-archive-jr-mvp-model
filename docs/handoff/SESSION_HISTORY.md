@@ -25,3 +25,13 @@
 - 후속(같은 날): 메뉴 이동 애니메이션(방향 슬라이드, 밑줄 이동) 추가 (D-011). typecheck·lint·build 통과, 프로덕션 서버에서 전환 타입·애니메이션 실행 확인.
 - 후속(같은 날): 홈의 검은 질문 블록을 살구빛으로 교체, 색 사용 원칙 정리 (D-012).
 - 완료 여부: 완료. 사용자가 "이번 세션 마무리하자"고 지시했고 종료 시점에 typecheck·lint·build를 다시 실행해 통과를 확인했다. 아직 로컬 커밋하지 않았다. 미검증 항목(접근성·실기기·Safari·빈 상태 화면 등)은 `CURRENT_STATE.md` 참고. 상세는 `sessions/SESSION_01.md`.
+
+---
+
+## 2026-10-24 · SESSION 02 · Supabase 데이터베이스 — DONE
+- 시작 상태: SESSION 01을 사용자가 직접 커밋(`e1aab35`), 작업 트리 clean. `CURRENT_STATE.md`의 "미커밋" 서술은 낡은 것으로 확인. Supabase CLI·Docker 없음. 사용자 결정: 개발용 원격 Supabase 프로젝트 + SQL Editor 적용, 생년월일은 연·월·일 전체 (D-013).
+- 수행: 테이블 5개·인덱스·트리거·RLS·컬럼 단위 GRANT 마이그레이션, 주간 질문 시드 12주(초안), `@supabase/supabase-js` 설치, 손으로 쓴 `src/types/database.ts`, 교차 접근 테스트(`npm run test:rls`). 사용자가 Supabase 프로젝트 생성·`.env.local` 작성·SQL 실행을 직접 했고, `.env.local`의 URL(대시보드 주소 → API 주소)을 점검·수정했다.
+- 테스트: 1차 24/25 통과 → 줄바꿈만 있는 본문이 CHECK를 통과하는 버그 발견(`btrim`은 스페이스만 제거) → 보정 마이그레이션(D-014) 적용 후 **25/25 통과**. 테스트 데이터 잔여 없음 확인. typecheck·lint·build 통과.
+- 범위 밖으로 둔 것: 화면의 목 데이터 교체(로그인 필요 → SESSION 03 이후), "이번 주 질문만 기록 가능" 규칙(SESSION 05), 자녀 1명 제한(SESSION 04), parent_settings 자동 생성.
+- 특이사항: 다른 채팅의 `next dev`(PID 5312)가 3000 포트에 떠 있어 서버를 새로 띄우지 않았고 종료하지도 않았다 (변경이 화면과 무관).
+- 완료 여부: 완료. 사용자가 "세션 종료"를 지시했다. 코드는 사용자가 `7d19b7d phase 2 end`로 커밋했고, 종료 문서 갱신분은 미커밋. 상세는 `sessions/SESSION_02.md`.

@@ -1,6 +1,6 @@
 # ARCHITECTURE — 라우팅 · 화면 구조 · 데이터 모델 (설계안)
 
-> 상태: SESSION 00 설계안. **SESSION 01에서 화면(목 데이터)만 구현됨** — 구현된 라우트는 2절 표 아래의 메모 참고. DB·인증·API는 아직 없다. 각 세션에서 구현하며 달라지면 이 문서와 `DECISIONS.md`를 함께 갱신한다.
+> 상태: SESSION 00 설계안. **SESSION 01에서 화면(목 데이터), SESSION 02에서 DB 스키마·RLS 구현·검증됨** (5절). 인증·API·화면의 DB 연결은 아직 없다. 각 세션에서 구현하며 달라지면 이 문서와 `DECISIONS.md`를 함께 갱신한다.
 
 ## 1. 폴더 구조 (현재 생성됨)
 ```
@@ -50,7 +50,8 @@ docs/handoff/     # 인수인계 문서
 - 인증 메일의 링크/코드는 Supabase Auth의 일회성·짧은 만료를 사용한다. 실제 만료 시간·이메일 보안 스캐너가 링크를 먼저 열어 토큰을 소모하는 문제(→ 일회용 코드 입력 방식과의 비교)는 **SESSION 03에서 공식 문서와 실제 메일로 확인해 결정**한다 (미확정).
 - 서버 컴포넌트/route handler에서 `getUser()`로 사용자를 확인한다 (세션 쿠키만 믿지 않는다).
 
-## 5. 데이터 모델 (PostgreSQL / Supabase) — 설계안
+## 5. 데이터 모델 (PostgreSQL / Supabase) — SESSION 02 구현됨
+실제 SQL은 `supabase/migrations/`. 설계와 달라진 점: 생년월일은 연·월·일 전체 저장(D-013), 빈 텍스트·길이 검사는 정규식·원본 길이 기준(D-014: 본문 ≤5000자, 별명 ≤30자, 앱이 저장 전 trim), 생성 후 수정 가능한 컬럼은 GRANT로 제한(기록은 `body`만, 자녀는 `nickname`·`birth_date`만, 설정은 `email_consent`만), `parent_settings.consent_updated_at`은 트리거가 기록. `parent_settings`는 자동 생성하지 않고 앱이 upsert한다. 이번 주 질문만 기록 가능한 규칙·자녀 1명 제한은 DB가 아닌 앱 로직(05/04).
 모든 테이블에 RLS 활성화. `auth.users`가 부모 계정이다. 부모 삭제 시 하위 데이터가 연쇄 삭제되도록 FK `on delete cascade`.
 
 ### parent_settings
@@ -119,7 +120,7 @@ docs/handoff/     # 인수인계 문서
 - `weekly_questions`: authenticated select만.
 - `email_deliveries`: anon/authenticated 권한 없음.
 - 클라이언트에는 publishable key만 사용. service role 키는 서버 코드(발송 작업)에서만 사용.
-- 검증: SESSION 02에서 서로 다른 두 사용자로 교차 접근 테스트를 작성한다.
+- 검증: SESSION 02에서 서로 다른 두 사용자로 교차 접근 테스트를 작성·통과했다 (`npm run test:rls`, 25개).
 
 ## 6. 개인정보·삭제 요구 구조
 - 계정 삭제 시 `auth.users` 삭제 → 모든 하위 데이터 cascade 삭제.
@@ -132,4 +133,4 @@ docs/handoff/     # 인수인계 문서
 - 주간 이메일 발송 요일·시간 (SESSION 07, 사용자 결정).
 - 이메일 발송 서비스·발신 도메인 (SESSION 07).
 - 기간별 묶음의 기준일 정의 (SESSION 06).
-- 주간 질문 콘텐츠와 시드 분량 (SESSION 02/05).
+- 주간 질문 콘텐츠와 시드 분량: 12주 초안 시드가 있으나 문구·분량은 사용자 확정 필요 (SESSION 05 전).
