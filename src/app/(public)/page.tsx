@@ -1,7 +1,7 @@
 import { Logo } from "@/components/logo";
 import { Eyebrow, PrimaryLink } from "@/components/states";
 
-// 소개 + 시작하기. 로그인 상태 분기(→ /home)와 /login 연결은 SESSION 03에서 한다.
+// 소개 + 시작하기. 이미 로그인했다면 /login에서 proxy가 /home으로 보낸다.
 export default function Landing() {
   return (
     <>
@@ -41,9 +41,9 @@ export default function Landing() {
         </ol>
 
         <div>
-          <PrimaryLink href="/home">미리 둘러보기</PrimaryLink>
+          <PrimaryLink href="/login">이메일로 시작하기</PrimaryLink>
           <p className="mt-4 text-xs text-ink-mute">
-            지금은 화면만 확인하는 단계예요. 로그인과 저장은 아직 연결되지 않았습니다.
+            비밀번호 없이, 메일로 받은 숫자 코드로 로그인해요.
           </p>
         </div>
       </main>

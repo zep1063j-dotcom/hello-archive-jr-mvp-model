@@ -1,11 +1,14 @@
+import { Suspense } from "react";
+import { signOut } from "@/app/actions/auth";
 import { Eyebrow } from "@/components/states";
+import { requireUser } from "@/lib/auth";
 import { formatAge, formatKoreanDate } from "@/lib/date";
 import { MOCK_TODAY, mockChild } from "@/lib/mock-data";
 
 export const metadata = { title: "프로필 · Hello Archive jr" };
 
-// 자녀 정보 수정, 이메일 수신 설정, 로그아웃, 데이터 삭제 요청은 SESSION 04·07에서 연결한다.
-// 지금은 읽기 전용 화면과 자리만 보여준다.
+// 자녀 정보 수정, 이메일 수신 설정, 데이터 삭제 요청은 SESSION 04·07에서 연결한다.
+// 지금은 읽기 전용 화면과 자리만 보여준다. 로그아웃은 동작한다.
 export default function ProfilePage() {
   return (
     <>
@@ -65,13 +68,17 @@ export default function ProfilePage() {
         >
           계정
         </h2>
-        <button
-          type="button"
-          disabled
-          className="mt-2 min-h-12 border border-line px-5 text-left text-ink-mute"
-        >
-          로그아웃 (준비 중)
-        </button>
+        <Suspense fallback={<p className="mt-2 text-sm text-ink-mute">불러오는 중…</p>}>
+          <SignedInAs />
+        </Suspense>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="min-h-12 w-full border border-ink px-5 text-left font-semibold hover:bg-ink hover:text-paper"
+          >
+            로그아웃
+          </button>
+        </form>
         <button
           type="button"
           disabled
@@ -81,5 +88,15 @@ export default function ProfilePage() {
         </button>
       </section>
     </>
+  );
+}
+
+// 로그인한 이메일 표시. 쿠키를 읽으므로 Suspense 안에서 렌더링한다.
+async function SignedInAs() {
+  const user = await requireUser();
+  return (
+    <p className="mt-2 text-sm text-ink-soft">
+      로그인한 이메일 <span className="font-semibold text-ink break-all">{user.email}</span>
+    </p>
   );
 }
