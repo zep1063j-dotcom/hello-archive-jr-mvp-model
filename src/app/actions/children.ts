@@ -47,14 +47,15 @@ export async function createChild(
     return { values, error: "저장하지 못했어요. 잠시 후 다시 시도해 주세요." };
   }
 
-  // 이미 등록돼 있으면(다른 탭·이중 제출) 만들지 않고 계속 진행한다.
+  // 이미 등록돼 있으면(다른 탭·이중 제출) 만들지 않고 계속 진행한다. 동시 요청은 DB 유니크 인덱스가 막는다.
   if (!count) {
     const { error } = await supabase.from("children").insert({
       user_id: user.id,
       nickname: parsed.value.nickname,
       birth_date: parsed.value.birthDate,
     });
-    if (error) {
+    // 23505: 동시 요청이 먼저 등록했다 (DB의 부모당 1명 제한). 이미 등록된 것이므로 성공으로 본다.
+    if (error && error.code !== "23505") {
       console.error("[children] 자녀 등록 실패", error.code);
       return { values, error: "저장하지 못했어요. 잠시 후 다시 시도해 주세요." };
     }

@@ -20,7 +20,9 @@ SESSION 03부터 `(app)` 화면은 로그인이 필요해서 `.env.local`(Supaba
 npm run typecheck  # next typegen && tsc --noEmit
 npm run lint
 npm run build
+npm run test:unit  # 순수 로직 단위 테스트 (DB 불필요, SESSION 04~)
 npm run test:rls   # DB 교차 접근 테스트 (.env.local + 개발용 Supabase 필요, SESSION 02~)
+npm run test:children  # 자녀 프로필 앱 쿼리·동시 등록 테스트 (개발용 Supabase, 마이그레이션 3개 적용 필요)
 ```
 
 ## 환경 변수 (이름만 — `.env.example` 참고)
@@ -46,6 +48,7 @@ npm run test:rls   # DB 교차 접근 테스트 (.env.local + 개발용 Supabase
 3. SQL Editor에서 순서대로 실행:
    1. `supabase/migrations/20261024000000_initial_schema.sql`
    2. `supabase/migrations/20261024000100_fix_blank_text_checks.sql` (공백 검사 보강)
+   3. `supabase/migrations/20261024000200_children_one_per_parent.sql` (부모당 자녀 1명, SESSION 04)
    3. `supabase/seed/weekly_questions.sql` (질문 문구는 초안)
 4. 검증: `npm run test:rls` — 임시 사용자 2명을 만들어 교차 접근·권한·제약·삭제 전파를 확인하고 모두 지운다. **개발용 프로젝트에서만 실행한다.**
 
