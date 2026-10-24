@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { EntryCard } from "@/components/entry-card";
 import { EmptyState, Eyebrow, PageSkeleton } from "@/components/states";
+import { requireChild } from "@/lib/children";
 import {
   CHAPTER_TITLES,
   getMockChapterEntries,
@@ -29,6 +30,7 @@ async function Chapter({
 }: {
   params: PageProps<"/archive/chapters/[period]">["params"];
 }) {
+  await requireChild("/archive");
   const { period } = await params;
   if (!isChapterPeriod(period)) notFound();
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Eyebrow, PageSkeleton } from "@/components/states";
+import { requireChild } from "@/lib/children";
 import { formatKoreanDate, formatWeekLabel } from "@/lib/date";
 import { allMockEntryIds, findMockEntry } from "@/lib/mock-data";
 
@@ -22,6 +23,7 @@ async function EntryDetail({
 }: {
   params: PageProps<"/archive/[entryId]">["params"];
 }) {
+  await requireChild("/archive");
   const { entryId } = await params;
   const entry = findMockEntry(entryId);
   if (!entry) notFound();

@@ -28,6 +28,11 @@ export function toKstDateKey(iso: string): string {
   return dateKeyFormatter.format(new Date(iso));
 }
 
+/** 오늘 날짜 (KST, YYYY-MM-DD). 요청 시점 값이라 쿠키 등 동적 데이터를 읽은 뒤에 호출한다. */
+export function todayKst(): string {
+  return dateKeyFormatter.format(new Date());
+}
+
 /** "2026년 10월 19일 주" 같은 주차 라벨 (weekStart는 KST 월요일 YYYY-MM-DD) */
 export function formatWeekLabel(weekStart: string): string {
   const [year, month, day] = weekStart.split("-").map(Number);

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { ErrorState, Eyebrow, PageSkeleton } from "@/components/states";
 import { WriteForm } from "@/components/write-form";
+import { requireChild } from "@/lib/children";
 import { formatKoreanDate, formatWeekLabel } from "@/lib/date";
 import {
   getMockThisWeekEntry,
@@ -24,6 +25,7 @@ async function WriteContent({
 }: {
   searchParams: PageProps<"/write">["searchParams"];
 }) {
+  await requireChild("/write");
   const params = await searchParams;
   const scenario = parseScenario(params.mock);
   if (scenario === "error") {

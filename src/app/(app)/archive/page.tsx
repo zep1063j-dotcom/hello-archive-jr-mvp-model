@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { EntryCard } from "@/components/entry-card";
 import { EmptyState, ErrorState, Eyebrow, PageSkeleton } from "@/components/states";
+import { requireChild } from "@/lib/children";
 import { groupByMonth } from "@/lib/entries";
 import { CHAPTER_TITLES, getMockEntries, parseScenario } from "@/lib/mock-data";
 import type { ChapterPeriod } from "@/types/archive";
@@ -23,6 +24,7 @@ async function ArchiveContent({
 }: {
   searchParams: PageProps<"/archive">["searchParams"];
 }) {
+  await requireChild("/archive");
   const scenario = parseScenario((await searchParams).mock);
   if (scenario === "error") {
     return <ErrorState title="기록을 불러오지 못했어요" />;

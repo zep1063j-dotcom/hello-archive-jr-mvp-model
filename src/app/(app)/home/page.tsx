@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import { HomeHub } from "@/components/home/home-hub";
 import { ErrorState, PageSkeleton } from "@/components/states";
+import { requireChild } from "@/lib/children";
 import {
   getMockEntries,
   MOCK_TODAY,
-  mockChild,
   parseScenario,
   thisWeekQuestion,
 } from "@/lib/mock-data";
@@ -25,6 +25,8 @@ async function HomeContent({
 }: {
   searchParams: PageProps<"/home">["searchParams"];
 }) {
+  // 자녀는 실제 데이터, 질문·기록은 SESSION 05까지 목 데이터다.
+  const child = await requireChild("/home");
   const params = await searchParams;
   const scenario = parseScenario(params.mock);
   if (scenario === "error") {
@@ -34,7 +36,7 @@ async function HomeContent({
   return (
     <HomeHub
       key={scenario}
-      child={mockChild}
+      child={child}
       question={thisWeekQuestion}
       initialEntries={getMockEntries(scenario)}
       today={MOCK_TODAY}

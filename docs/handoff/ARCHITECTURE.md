@@ -1,14 +1,18 @@
 # ARCHITECTURE — 라우팅 · 화면 구조 · 데이터 모델 (설계안)
 
-> 상태: SESSION 00 설계안. **SESSION 01에서 화면(목 데이터), SESSION 02에서 DB 스키마·RLS 구현·검증됨** (5절). 인증·API·화면의 DB 연결은 아직 없다. 각 세션에서 구현하며 달라지면 이 문서와 `DECISIONS.md`를 함께 갱신한다.
+> 상태: SESSION 00 설계안. **SESSION 01에서 화면(목 데이터), SESSION 02에서 DB 스키마·RLS, SESSION 03에서 인증(일회용 코드)·보호 라우트 구현·검증됨** (4~5절). API·화면의 DB 연결은 아직 없다. 각 세션에서 구현하며 달라지면 이 문서와 `DECISIONS.md`를 함께 갱신한다.
 
 ## 1. 폴더 구조 (현재 생성됨)
 ```
 src/
-  app/            # App Router (라우트, 레이아웃)
+  proxy.ts        # 보호 라우트 낙관적 차단 + 세션 쿠키 갱신 (SESSION 03)
+  app/            # App Router (라우트, 레이아웃). actions/auth.ts = 로그인 서버 액션
   components/     # 재사용이 필요한 UI만
   lib/
-    supabase/     # 브라우저/서버 클라이언트 (SESSION 02~03)
+    supabase/     # 서버 클라이언트(server.ts)·env.ts (SESSION 03). 브라우저 클라이언트는 필요해질 때 추가
+    auth.ts       # requireUser(), safeNextPath() (SESSION 03)
+    children.ts   # getMyChild(), requireChild() (SESSION 04)
+    child-validation.ts  # 자녀 입력 검증, 순수 TS (SESSION 04)
   types/          # DB 타입 등
 supabase/
   migrations/     # SQL 마이그레이션 (SESSION 02)
@@ -21,34 +25,37 @@ docs/handoff/     # 인수인계 문서
 
 | 경로 | 그룹 | 설명 | 세션 |
 |---|---|---|---|
-| `/` | public | 소개 + 시작하기. 로그인 상태면 `/home`으로 | 01, 03 |
-| `/login` | public | 이메일 입력 → 인증 메일 요청. `?next=` 지원 | 03 |
-| `/auth/callback` | public(route handler) | 인증 코드 교환, `next` 검증 후 리다이렉트 | 03 |
-| `/auth/expired` | public | 만료/사용된 링크 안내 + 재발급 | 03, 07 |
-| `/onboarding` | app | 첫 로그인 시 자녀 프로필 등록 | 04 |
+| `/` | public | 소개 + 시작하기(→ `/login`). 정적이라 로그인 분기 없음(`/login`에서 `/home`으로) | 01, 03 |
+| `/login` | public | 이메일 입력 → 메일의 숫자 코드 입력. `?next=` 지원. 구현됨 | 03 |
+| ~~`/auth/callback`~~ | — | **만들지 않음**: 코드 방식(D-016)이라 서버 액션이 확인한다 | — |
+| ~~`/auth/expired`~~ | — | **만들지 않음**: 만료·오류는 폼 안내 + 코드 다시 받기 | — |
+| `/onboarding` | 별도(`src/app/onboarding`, 내비 없는 화면) | 첫 로그인 시 자녀 등록. 자녀가 없으면 `requireChild()`가 `?next=`와 함께 이곳으로 보낸다. 구현됨 | 04 |
 | `/home` | app | 대시보드: 이번 주 질문 CTA, 최근 기록 | 01 |
 | `/write` | app | 이번 주 질문 + 기록 작성/수정 (**이메일 딥링크 목적지**) | 05 |
 | `/archive` | app | 타임라인(최신순) | 06 |
 | `/archive/[entryId]` | app | 기록 상세 | 06 |
 | `/archive/chapters/[period]` | app | `1m` 미니챕터 / `3m` 이야기집 / `1y` 기록집 | 06 |
-| `/profile` | app | 자녀 프로필, 이메일 수신 설정, 로그아웃, 데이터 삭제 요청 | 04, 07 |
+| `/profile` | app | 자녀 조회·수정(`?edit=1`), 로그아웃 구현됨 / 이메일 수신 설정·데이터 삭제 요청은 07 | 04, 07 |
 | `/api/cron/weekly-email` | route handler | 예약 실행 진입점. `CRON_SECRET` Bearer 검증 | 07 |
 
-> **SESSION 01 구현 현황 (목 데이터)**: `/`, `/home`, `/write`, `/archive`, `/archive/[entryId]`, `/archive/chapters/[period]`, `/profile`, 전역 `not-found`, `(app)`의 `loading`/`error`. `/login`, `/auth/*`, `/onboarding`, `/api/*`는 미구현. `(app)` 그룹은 아직 인증 보호가 없다 (SESSION 03). 목 시나리오는 D-007, `/home` 허브 구성은 D-009 참고.
+> **SESSION 03 구현 현황**: `/login`, `src/proxy.ts`(보호 라우트), `(app)` 레이아웃 서버 검증, 프로필 로그아웃. 보호 대상 matcher: `/login`, `/onboarding`, `/home`, `/write`, `/archive/:path*`, `/profile`.
+>
+> **SESSION 01 구현 현황 (목 데이터)**: `/`, `/home`, `/write`, `/archive`, `/archive/[entryId]`, `/archive/chapters/[period]`, `/profile`, 전역 `not-found`, `(app)`의 `loading`/`error`. `/onboarding`, `/api/*`는 미구현. 목 시나리오는 D-007, `/home` 허브 구성은 D-009 참고.
 
 내비게이션(홈 / 기록 쓰기 / 아카이브 / 프로필)은 **상단 고정**이다 (D-010). 모바일은 로고 줄 아래에 메뉴 줄, md 이상은 한 줄. 본문은 중앙 정렬 컬럼.
 
 ## 3. 사용자 흐름
 1. 신규: `/` → `/login` → 메일 인증 → `/onboarding`(자녀 등록) → `/write`.
 2. 재방문(세션 유효): `/home` → `/write` → 저장 → 저장 상태 표시 → `/archive`.
-3. 이메일 링크: 메일의 `/write` 링크 클릭 → 세션 유효하면 즉시 작성 화면 / 없으면 `/login?next=/write` → 인증 메일 → `/auth/callback?next=/write` → `/write`.
-4. 링크 만료: `/auth/expired` → 같은 이메일로 재발급(`next` 유지).
+3. 이메일 링크: 메일의 `/write` 링크 클릭 → 세션 유효하면 즉시 작성 화면 / 없으면 `/login?next=/write` → 이메일 입력 → 메일의 코드 입력 → `/write`. (SESSION 07에서 실제 메일로 검증)
+4. 코드 만료·오류: 폼 안에서 안내하고 "코드 다시 받기"로 같은 이메일에 새 코드를 보낸다(`next` 유지).
 
-## 4. 인증 리다이렉트 설계 원칙 (SESSION 03에서 구체화)
+## 4. 인증 리다이렉트 설계 원칙 (SESSION 03 구현됨, D-016·D-018)
 - `next` 값은 **같은 사이트의 내부 경로 허용 목록**(예: `/write`, `/home`, `/archive…`)만 허용한다. 외부 URL, `//`, `\` 포함 값은 버리고 `/home`으로 보낸다 (open redirect 방지).
 - 주간 안내 이메일 링크는 `APP_URL/write` 형태의 **일반 링크**다. 로그인 토큰을 포함하지 않는다.
-- 인증 메일의 링크/코드는 Supabase Auth의 일회성·짧은 만료를 사용한다. 실제 만료 시간·이메일 보안 스캐너가 링크를 먼저 열어 토큰을 소모하는 문제(→ 일회용 코드 입력 방식과의 비교)는 **SESSION 03에서 공식 문서와 실제 메일로 확인해 결정**한다 (미확정).
-- 서버 컴포넌트/route handler에서 `getUser()`로 사용자를 확인한다 (세션 쿠키만 믿지 않는다).
+- 인증 메일에는 **숫자 코드만** 넣는다(링크 없음). 코드는 Supabase Auth의 일회성·짧은 만료를 쓴다. 이메일 보안 스캐너·메일 앱 내장 브라우저 문제를 피하려고 일회용 코드 방식을 택했다 (D-016). 실제 만료 시간은 Supabase 설정값이며 미확인.
+- `next` 허용 목록은 `src/lib/auth.ts`의 `safeNextPath()`가 한 곳에서 처리한다.
+- 세션 확인 계층: `proxy.ts`(`getClaims()` 낙관적 차단) → 서버 `requireUser()`(`getUser()`로 Auth 서버 검증) → RLS. 데이터를 읽는 서버 코드는 각자 `requireUser()`를 호출한다. 세션을 읽는 컴포넌트는 `<Suspense>` 안에 둔다 (`cacheComponents`, D-018).
 
 ## 5. 데이터 모델 (PostgreSQL / Supabase) — SESSION 02 구현됨
 실제 SQL은 `supabase/migrations/`. 설계와 달라진 점: 생년월일은 연·월·일 전체 저장(D-013), 빈 텍스트·길이 검사는 정규식·원본 길이 기준(D-014: 본문 ≤5000자, 별명 ≤30자, 앱이 저장 전 trim), 생성 후 수정 가능한 컬럼은 GRANT로 제한(기록은 `body`만, 자녀는 `nickname`·`birth_date`만, 설정은 `email_consent`만), `parent_settings.consent_updated_at`은 트리거가 기록. `parent_settings`는 자동 생성하지 않고 앱이 upsert한다. 이번 주 질문만 기록 가능한 규칙·자녀 1명 제한은 DB가 아닌 앱 로직(05/04).
@@ -129,7 +136,9 @@ docs/handoff/     # 인수인계 문서
 - 개인정보 처리방침·삭제 요청 절차의 문구는 법률 검토 필요 (미정).
 
 ## 7. 미결정 사항
-- 인증 방식 최종안: 매직 링크 vs 일회용 코드 (SESSION 03).
+- (해결) 인증 방식: 일회용 코드로 확정 (D-016).
+- 발신 도메인: 베타 전 필요 (D-017). 정식 Supabase 프로젝트·배포 주소 (SESSION 08).
+- 장기 방향(PWA → 앱, 사진·공유·오디오) 전환 시기와 방식은 베타 결과 후 (D-015).
 - 주간 이메일 발송 요일·시간 (SESSION 07, 사용자 결정).
 - 이메일 발송 서비스·발신 도메인 (SESSION 07).
 - 기간별 묶음의 기준일 정의 (SESSION 06).
