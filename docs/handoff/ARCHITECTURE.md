@@ -1,6 +1,6 @@
 # ARCHITECTURE — 라우팅 · 화면 구조 · 데이터 모델 (설계안)
 
-> 상태: **SESSION 00 설계안. 아직 구현되지 않았다.** 각 세션에서 구현하며 달라지면 이 문서와 `DECISIONS.md`를 함께 갱신한다.
+> 상태: SESSION 00 설계안. **SESSION 01에서 화면(목 데이터)만 구현됨** — 구현된 라우트는 2절 표 아래의 메모 참고. DB·인증·API는 아직 없다. 각 세션에서 구현하며 달라지면 이 문서와 `DECISIONS.md`를 함께 갱신한다.
 
 ## 1. 폴더 구조 (현재 생성됨)
 ```
@@ -34,7 +34,9 @@ docs/handoff/     # 인수인계 문서
 | `/profile` | app | 자녀 프로필, 이메일 수신 설정, 로그아웃, 데이터 삭제 요청 | 04, 07 |
 | `/api/cron/weekly-email` | route handler | 예약 실행 진입점. `CRON_SECRET` Bearer 검증 | 07 |
 
-모바일 하단 내비게이션(홈 / 기록 쓰기 / 아카이브 / 프로필)을 기본으로 하고 데스크톱에서는 중앙 정렬 컬럼 + 상단 내비게이션으로 확장한다.
+> **SESSION 01 구현 현황 (목 데이터)**: `/`, `/home`, `/write`, `/archive`, `/archive/[entryId]`, `/archive/chapters/[period]`, `/profile`, 전역 `not-found`, `(app)`의 `loading`/`error`. `/login`, `/auth/*`, `/onboarding`, `/api/*`는 미구현. `(app)` 그룹은 아직 인증 보호가 없다 (SESSION 03). 목 시나리오는 D-007, `/home` 허브 구성은 D-009 참고.
+
+내비게이션(홈 / 기록 쓰기 / 아카이브 / 프로필)은 **상단 고정**이다 (D-010). 모바일은 로고 줄 아래에 메뉴 줄, md 이상은 한 줄. 본문은 중앙 정렬 컬럼.
 
 ## 3. 사용자 흐름
 1. 신규: `/` → `/login` → 메일 인증 → `/onboarding`(자녀 등록) → `/write`.

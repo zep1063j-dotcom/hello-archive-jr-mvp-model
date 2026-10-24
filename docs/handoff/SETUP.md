@@ -13,6 +13,8 @@ npm run dev        # http://localhost:3000
 ```
 환경 변수 없이도 현재(SESSION 00) 화면은 실행된다. Supabase를 연결하는 SESSION 02부터 `.env.local`이 필요하다.
 
+> `next build`는 Google Fonts(Noto Serif KR)를 내려받으므로 네트워크가 필요하다 (D-008).
+
 ## 검증 명령
 ```bash
 npm run typecheck  # next typegen && tsc --noEmit
