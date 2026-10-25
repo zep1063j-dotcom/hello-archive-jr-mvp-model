@@ -1,5 +1,6 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
+import { io } from "next/cache";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
 import { getSupabaseEnv } from "./env";
@@ -8,6 +9,8 @@ import { getSupabaseEnv } from "./env";
 // 로그인한 부모의 세션 쿠키를 쓰므로 RLS가 그 사용자 기준으로 적용된다.
 export async function createClient() {
   const cookieStore = await cookies();
+  // 세션 확인(supabase-js)이 현재 시각을 읽으므로 요청 시점 작업으로 표시한다 (미리 만드는 화면에 넣지 않는다).
+  await io();
   const { url, publishableKey } = getSupabaseEnv();
 
   return createServerClient<Database>(url, publishableKey, {

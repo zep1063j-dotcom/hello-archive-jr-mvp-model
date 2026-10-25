@@ -1,9 +1,9 @@
 # CURRENT STATE
 
-최종 갱신: 2026-10-25 (SESSION 07 구현·로컬 검증 종료 — 실제 메일 발송 검증 대기)
+최종 갱신: 2026-10-25 (SESSION 07 완료 — 실제 메일 발송·수신 확인)
 
 ## 세션 현황
-- 현재 세션: **SESSION 07 — 주간 이메일 자동화 (IN_PROGRESS)**. 구현·로컬 검증은 끝났고 **실제 메일 발송 검증이 남았다**(사용자가 `.env.local`에 Resend 키 등을 넣어야 함). DONE 처리하지 않았다.
+- 현재 세션: **SESSION 07 — 주간 이메일 자동화 (DONE)**. 구현·로컬 검증에 더해 실제 Resend 발송 1통이 사용자 받은편지함에 도착함을 확인했다(발송 작업 직접 호출). Vercel Cron 실동작은 SESSION 08.
 - 마지막 완료 세션: **SESSION 06 — 성장 아카이브** (DONE, 2026-10-25). 그 전: 05 (질문·기록), 04 (자녀), 03 (인증), 02 (DB), 01 (UI/UX), 00.
 - 진행 단계: 전체 10세션(00~09) 중 00~06 완료(7개), 07 진행 중, 08~09 남음.
 
@@ -33,7 +33,7 @@
   - 기간 묶음 = **달력 고정 구간**(월/분기/연), KST 반개구간 `[start, end)`, 기록 소속은 작성일(KST). 순수 모듈 `src/lib/chapters.ts`. 임시 `filterByPeriod`·홈 기간 탭 제거.
   - `/archive/chapters/[period]`(챕터 목록, 진행 중/완결) → `/archive/chapters/[period]/[chapterKey]`(챕터 상세, 키 `2026-10`·`2026-q4`·`2026`, 이전·다음 챕터). 잘못된 키·미래 구간은 404. 홈은 "최근 기록"(최근 8주 범위) + 아카이브 링크, 전체·월별 열람은 `/archive`.
   - 검증: `test:unit` 62/62(챕터 30개 추가), typecheck·lint·build 통과, 브라우저로 KST 자정 경계·분기·연·빈 상태·404·375px 확인(시험 데이터는 삭제해 자녀·기록 0행 복구).
-- **SESSION 07 (주간 이메일, 로컬·DB 검증됨, 실제 발송 미검증, D-022)**:
+- **SESSION 07 (주간 이메일, 로컬·DB 검증됨, 실제 발송·수신 확인됨, D-022)**:
   - 정책: **전원 월요일 19:00 KST**, 수신 동의자만, 자녀 있어야 함, 이번 주 발송 시각 이후에 가입·동의한 부모는 다음 월요일부터, 이번 주 이미 기록한 부모는 건너뜀(`skipped`). 시각은 `WEEKLY_EMAIL_SEND_HOUR_KST` + `vercel.json`.
   - `GET /api/cron/weekly-email`(`CRON_SECRET` Bearer) → `runWeeklyEmailJob`(`src/lib/weekly-email-job.ts`): `email_deliveries` 유니크 행 점유 후 Resend 발송(`src/lib/resend.ts`, `Idempotency-Key`), `failed` 최대 3회, 오래된 `processing`은 이어서. `vercel.json` = 월·화 10:00 UTC(화는 보충). service role 클라이언트는 `src/lib/supabase/admin.ts`(예약 실행 전용).
   - 메일 본문: 질문 + `/write` 일반 링크 + 프로필 링크. 로그인 토큰·자녀 정보·추적 요소 없음.
@@ -58,12 +58,12 @@
 - 허브·연속 주 수 효과, 상단 2단 메뉴 모바일 사용성, 코드 입력 한 단계의 체감 마찰은 **가설**. 로고(`h·`)는 임시. 주간 질문 문구는 초안.
 - **SESSION 04 미검증**: iOS Safari의 날짜 입력, 스크린리더 실제 읽기, 앱 화면에서 두 계정 교차 확인(Resend 도메인 필요), 생년월일 18년 하한(`MAX_CHILD_AGE_YEARS`)의 적절성(가정), 제출 오류 시 포커스가 첫 오류 필드로 안 가는 점(개선 여지), 이 Mac은 전체 Xcode가 없어 iOS 시뮬레이터 도구 사용 불가.
 - **SESSION 05 미검증**: 세션 만료 중 저장(로그인으로 이동, 쓴 내용 소실), 앱 화면 두 계정 교차 확인, iOS Safari, 스크린리더. (주 경계·질문 없는 주·네트워크 실패·5000자는 종료 직전 화면으로 확인함.) 프로덕션 서버 로그의 `Date.now() while prerendering` 메시지는 이번 변경과 무관한 코드에서도 나며(가설: supabase-js 세션 로딩), 동작 영향은 없다.
-- **SESSION 07 미검증**: 실제 메일 발송·수신(Resend 키·발신 주소 미설정), Resend 실제 응답·한도, Vercel Cron 동작(미배포)·UTC 해석, 메일 클라이언트별 렌더링·스팸 분류, 메일 링크로 비로그인 진입 후 작성 화면 복귀(실제 메일로), 법률 검토(광고성 정보 해당 여부·수신 거부 표기·처리방침). 월요일 저녁 19시가 최적인지는 가설.
+- **SESSION 07 미검증**: 크론 라우트 경유 실제 발송(이번엔 발송 작업을 직접 호출), Resend 한도·여러 명 발송, Vercel Cron 동작(미배포)·UTC 해석, 메일 클라이언트별 렌더링·스팸 분류, 메일 링크로 비로그인 진입 후 작성 화면 복귀(실제 메일로), 법률 검토(광고성 정보 해당 여부·수신 거부 표기·처리방침). 월요일 저녁 19시가 최적인지는 가설.
 - **SESSION 06 미검증**: 프로덕션 404의 HTTP 상태 코드, 앱 화면 두 계정 교차 확인, iOS Safari, 스크린리더, 기록이 많을 때의 성능·가독성, 연 경계의 실제 동작(단위 테스트만). 분기·연 챕터가 부모에게 "책 같은 묶음"으로 느껴지는지, 챕터가 1개뿐인 초기 화면의 체감은 **가설**.
 - 자동화 테스트: 순수 로직(`test:unit`), DB(`test:rls`, `test:children`, `test:entries`). 인증·화면 테스트는 수동 검증만 했다.
 
 ## 진행 중인 작업
-SESSION 06은 `e327067`까지 커밋됨. **SESSION 07 변경은 아직 커밋되지 않았다**(사용자가 요청하면 로컬 커밋, push는 사용자가 직접). 변경: `src/lib/{weekly-email(.test),weekly-email-job,resend,email-consent}.ts`, `src/lib/supabase/admin.ts`, `src/app/api/cron/weekly-email/route.ts`, `src/app/actions/{settings,children}.ts`, `src/components/child-form.tsx`, `src/app/(app)/profile/page.tsx`, `supabase/tests/weekly-email.test.ts`, `vercel.json`, `package.json`, `.env.example`, `docs/handoff/*`.
+SESSION 06은 `e327067`, SESSION 07 구현은 `da6fa68`까지 커밋됨(push는 사용자가 직접). 그 뒤 `createClient()`의 `io()` 추가와 문서는 별도 커밋. 변경: `src/lib/{weekly-email(.test),weekly-email-job,resend,email-consent}.ts`, `src/lib/supabase/admin.ts`, `src/app/api/cron/weekly-email/route.ts`, `src/app/actions/{settings,children}.ts`, `src/components/child-form.tsx`, `src/app/(app)/profile/page.tsx`, `supabase/tests/weekly-email.test.ts`, `vercel.json`, `package.json`, `.env.example`, `docs/handoff/*`.
 
 ## 미해결 사항 · 차단 요소
 - **베타 전 도메인 필요**: Resend 발신 도메인 인증 없이는 본인 외에게 메일을 못 보낸다(D-017). 도메인은 Vercel 배포 주소·주간 메일(SESSION 07)에도 쓴다. SESSION 08 전에 구한다.
@@ -83,8 +83,8 @@ npm run dev       # http://localhost:3000
 로그인이 필요한 화면을 보려면 `.env.local`과 Supabase SMTP 설정이 필요하다 (`SETUP.md`). 검증: `npm run typecheck && npm run lint && npm run build`, DB는 `npm run test:rls`(개발용 프로젝트에서만).
 
 ## 다음에 수행할 정확한 작업
-1. (사용자) SESSION 07 변경을 로컬 커밋·푸시.
-2. **SESSION 07 마무리(실제 발송 검증)** — 사용자가 `.env.local`에 직접 입력(채팅에 붙이지 않는다): `RESEND_API_KEY`, `EMAIL_FROM`(도메인 없이는 Resend 테스트 발신 주소, 수신은 Resend 가입 이메일뿐), `CRON_SECRET`(긴 무작위 문자열). 그 뒤 Claude가 본인 이메일 1통 실제 발송 시험(동의 시각이 이번 주 월요일 19시 이전이어야 대상이 되므로 시험 방법 — 예: 다음 월요일 이후 실행 또는 테스트용 시각 조정 — 을 정해서 진행), 메일의 `/write` 링크 → 로그인 → 작성 화면 흐름 확인. 이후 ROADMAP 07을 DONE으로.
+1. (사용자) 로컬 커밋 확인 후 push.
+2. (선택) 받은 메일의 `/write` 링크 → 로그인 → 작성 화면 흐름, 모바일 메일 앱 렌더링, 스팸함 분류 확인(배포 주소·도메인이 정해진 뒤에 의미가 있다).
 3. 사용자 확인: 월요일 19시 발송 시각, 메일 문구·제목, 주간 질문 12주 문구·분량(시드는 2026-12-14 주까지, 베타 전 질문 추가), 챕터 문구(SESSION 06), 삭제 확인 UI·지난 기록 수정 정책(D-020).
 4. **SESSION 08 — QA 및 실제 배포**: 도메인 확보(Resend 인증·Vercel 주소), 정식 Supabase 프로젝트(마이그레이션 3개·시드·SMTP·템플릿·Site URL), Vercel 배포(환경 변수 7개, `CRON_SECRET`, Cron 동작·UTC 해석 확인), 통합·보안·모바일·접근성 점검.
 

@@ -92,3 +92,12 @@
 - 범위 밖/미검증: **실제 메일 발송·수신**(Resend 키·발신 주소·`CRON_SECRET`이 `.env.local`에 비어 있음), Vercel Cron 실동작, 메일 렌더링·스팸 분류, 메일 링크 진입 후 복귀(실제 메일로), 법률 검토.
 - 완료 여부: **미완료(IN_PROGRESS)** — 완료 조건의 "테스트 사용자에게 실제 발송" 미충족. 커밋·푸시는 사용자가 직접 한다. 상세는 `sessions/SESSION_07.md`.
 
+
+---
+
+## 2026-10-25 · SESSION 07 (이어서) · 실제 발송 검증 — DONE
+- 시작 상태: 구현은 `da6fa68`에 커밋됨, `.env.local`에 `RESEND_API_KEY`·`EMAIL_FROM`·`CRON_SECRET`을 사용자가 직접 입력(채팅에는 붙이지 않음. 터미널 읽기 중 `CRON_SECRET` 값이 한 번 노출됨 → 배포용 값은 새로 만들기로 안내).
+- 수행: 사용자가 자녀 등록과 수신 동의를 마친 뒤, 임시 스크립트(현재 시각을 다음 월요일 19:00 KST로 가정)로 발송 작업을 실제 Resend로 실행 → eligible 1·sent 1·failed 0. 사용자가 받은편지함 도착을 확인. 시험용 `email_deliveries` 행과 임시 스크립트는 삭제.
+- 추가 수정: 로그인 직후 개발 서버 오류 오버레이(`Date.now()` while prerendering, 스택은 supabase-js `__loadSession`)는 SESSION 05부터 로그에 찍히던 기존 현상이었다. `lib/supabase/server.ts`의 `createClient()`에 `await io()`를 추가했고, 개발 서버에서 `/profile`·`/home`을 열어도 오류 로그가 늘지 않았다(`next build`·프로덕션 서버는 재확인 안 함).
+- 미검증: 크론 라우트 경유 발송, Resend 한도·다수 발송, Vercel Cron 실동작·UTC 해석, 링크 흐름·모바일 렌더링·스팸 분류, 법률 검토.
+- 완료 여부: 완료. 커밋·푸시는 사용자가 직접 한다.
