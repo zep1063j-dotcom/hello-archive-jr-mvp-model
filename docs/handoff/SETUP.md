@@ -81,8 +81,15 @@ npm run test:weekly-email  # 주간 이메일 발송 작업(가짜 발송기, �
 - **Vercel Cron**: `vercel.json`의 `0 10 * * 1,2`(UTC 기준 월·화 10:00 = 한국 19:00, 화요일은 누락·실패 보충). Vercel 문서(2026-10 조회): Hobby는 하루 1회까지, 지정한 시 안의 임의 시각(19:00~19:59), 실패해도 재시도 없음, 드물게 누락·중복 실행. 배포 후 UTC 해석과 `CRON_SECRET` 동작을 확인해야 한다(미검증). Vercel 프로젝트에 `CRON_SECRET`을 같은 이름으로 등록한다.
 - 발송 이력은 DB `email_deliveries`(status·attempts·error_code)에 남는다 (service role만 접근).
 
-## 배포 (SESSION 08에서 작성)
-Vercel 예정. 아직 배포하지 않았다.
+## 배포 (SESSION 08, 체크리스트 — 아직 배포하지 않았다)
+Vercel 예정. 아래는 순서이며 각 항목은 실행 후 결과를 SESSION_08.md에 기록한다.
+1. **정식 Supabase 프로젝트 생성**(개발용과 분리, 서울 리전). SQL Editor에서 마이그레이션 3개 → 시드 순으로 실행. 시드 질문은 베타 기간만큼 늘린다(현재 2026-12-14 주까지).
+2. 정식 프로젝트에 인증 메일 설정 반복(위 "인증 메일 설정" 2~4번): Resend SMTP, 템플릿 2개(`{{ .Token }}`), OTP 길이. Authentication → URL Configuration의 Site URL을 배포 주소로.
+3. **도메인**을 Resend에서 인증하고 `EMAIL_FROM`을 그 도메인 주소로, Supabase SMTP 발신 주소도 같이 변경.
+4. **Vercel 프로젝트** 생성(GitHub `origin` 연결, push는 사용자가 직접). 환경 변수 7개 등록: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL`(HTTPS 주소), `RESEND_API_KEY`, `EMAIL_FROM`, `CRON_SECRET`(새로 만든 긴 무작위 값). 정식 프로젝트 키를 쓰고 개발용 키와 섞지 않는다.
+5. 배포 후 스모크: `/` 200 → `/home` 비로그인 시 `/login` → 새 이메일로 코드 로그인(가입 경로) → 온보딩 → 기록 저장·수정·삭제 → 아카이브 → 수신 동의 켜기/끄기 → 로그아웃. 응답 헤더(보안 헤더) 확인.
+6. **Cron 확인**: Vercel 대시보드의 Cron Jobs에서 `0 10 * * 1,2`(UTC) 등록 확인, 가능하면 수동 실행 후 `email_deliveries`·응답 집계 확인. `CRON_SECRET` Bearer가 맞는지(401이면 변수 이름·값 불일치).
+7. 두 계정으로 서로의 기록이 안 보이는지 앱 화면에서 확인(Resend 도메인 인증 후 가능).
 
 ## 브라우저 미리보기 (Claude Code 데스크톱)
 `.claude/launch.json`의 `dev`(npm run dev, 포트 3000) 또는 `prod-3100`(npm run start -p 3100, 먼저 `npm run build`)으로 미리보기를 시작할 수 있다. 다른 채팅의 dev 서버가 3000 포트를 쓰고 있으면 `prod-3100`을 쓴다.

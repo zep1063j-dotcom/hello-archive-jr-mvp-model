@@ -101,3 +101,12 @@
 - 추가 수정: 로그인 직후 개발 서버 오류 오버레이(`Date.now()` while prerendering, 스택은 supabase-js `__loadSession`)는 SESSION 05부터 로그에 찍히던 기존 현상이었다. `lib/supabase/server.ts`의 `createClient()`에 `await io()`를 추가했고, 개발 서버에서 `/profile`·`/home`을 열어도 오류 로그가 늘지 않았다(`next build`·프로덕션 서버는 재확인 안 함).
 - 미검증: 크론 라우트 경유 발송, Resend 한도·다수 발송, Vercel Cron 실동작·UTC 해석, 링크 흐름·모바일 렌더링·스팸 분류, 법률 검토.
 - 완료 여부: 완료. 커밋·푸시는 사용자가 직접 한다.
+
+
+---
+
+## 2026-10-25 · SESSION 08 · QA 및 실제 배포 — IN_PROGRESS (로컬 QA 1차 완료, 배포 대기)
+- 시작 상태: SESSION 07까지 커밋(`362fc66`), 작업 트리 clean.
+- 수행: typecheck·lint·build, `test:unit` 80/80, DB 테스트 4종(25·7·9·10) 재실행 통과. 비밀키 이력 점검(발견 없음), `npm audit` 0건, 보안 헤더 4종 추가(`next.config.ts`) 후 프로덕션 서버에서 확인. 배포 체크리스트를 `SETUP.md`에 작성.
+- 미완료: 도메인·정식 Supabase·Vercel이 없어 배포·Cron·새 가입 경로·두 계정 화면·모바일 실기기·접근성 점검 못 함. 사용자 결정 필요: 소개 페이지 noindex 여부.
+- 완료 여부: **미완료(IN_PROGRESS)**. 커밋·푸시는 사용자가 직접 한다. 상세는 `sessions/SESSION_08.md`.
