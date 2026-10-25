@@ -110,3 +110,7 @@
 - 수행: typecheck·lint·build, `test:unit` 80/80, DB 테스트 4종(25·7·9·10) 재실행 통과. 비밀키 이력 점검(발견 없음), `npm audit` 0건, 보안 헤더 4종 추가(`next.config.ts`) 후 프로덕션 서버에서 확인. 배포 체크리스트를 `SETUP.md`에 작성.
 - 미완료: 도메인·정식 Supabase·Vercel이 없어 배포·Cron·새 가입 경로·두 계정 화면·모바일 실기기·접근성 점검 못 함. 사용자 결정 필요: 소개 페이지 noindex 여부.
 - 완료 여부: **미완료(IN_PROGRESS)**. 커밋·푸시는 사용자가 직접 한다. 상세는 `sessions/SESSION_08.md`.
+
+### 2026-10-25 (이어서) · SESSION 08 · 배포 진행
+- 사용자가 정식 Supabase(`helloarchive beta -v`)·Vercel 배포를 직접 수행. 프로덕션 주소 curl 확인(200·307·401·404, 보안 헤더). 로그인 코드 발송 실패(Runtime Logs 상태 `0` = 연결 실패)는 `NEXT_PUBLIC_SUPABASE_URL` 재입력·재배포로 해결(정확한 오입력 내용은 미확인). 이후 코드 로그인·자녀 등록 완료, 정식 DB 보안 SQL·Security Advisor 이상 없음(사용자 보고).
+- 미완료: 스모크 나머지, Vercel Cron 첫 실행 확인, 도메인, 시험 데이터 정리, 두 계정·모바일 실기기. 여전히 IN_PROGRESS.

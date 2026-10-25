@@ -1,9 +1,9 @@
 # CURRENT STATE
 
-최종 갱신: 2026-10-25 (SESSION 08 진행 중 — 로컬 QA 1차 완료, 배포 대기)
+최종 갱신: 2026-10-25 (SESSION 08 진행 중 — Vercel 배포·정식 Supabase 로그인 확인, 스모크 일부·Cron·도메인 남음)
 
 ## 세션 현황
-- 현재 세션: **SESSION 08 — QA 및 실제 배포 (IN_PROGRESS)**: 전체 테스트 재통과·비밀키/의존성 점검·보안 헤더 추가까지 했고, 배포는 도메인·정식 Supabase·Vercel 준비 대기(`sessions/SESSION_08.md`, 체크리스트 `SETUP.md`).
+- 현재 세션: **SESSION 08 — QA 및 실제 배포 (IN_PROGRESS)**: 전체 테스트 재통과·보안 헤더 추가, **Vercel 배포(`hello-archive-jr-mvp-model.vercel.app`)와 정식 Supabase(`helloarchive beta -v`) 연결·코드 로그인·자녀 등록 확인(사용자 보고)**. 남은 것: 스모크 나머지, Cron(월 19시 KST), 도메인(`sessions/SESSION_08.md`, 체크리스트 `SETUP.md`).
 - 직전 완료 세션: **SESSION 07 — 주간 이메일 자동화 (DONE)**. 구현·로컬 검증에 더해 실제 Resend 발송 1통이 사용자 받은편지함에 도착함을 확인했다(발송 작업 직접 호출). Vercel Cron 실동작은 SESSION 08.
 - 마지막 완료 세션: **SESSION 06 — 성장 아카이브** (DONE, 2026-10-25). 그 전: 05 (질문·기록), 04 (자녀), 03 (인증), 02 (DB), 01 (UI/UX), 00.
 - 진행 단계: 전체 10세션(00~09) 중 00~06 완료(7개), 07 진행 중, 08~09 남음.
