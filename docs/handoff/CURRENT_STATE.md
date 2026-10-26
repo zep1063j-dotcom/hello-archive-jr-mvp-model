@@ -1,6 +1,6 @@
 # CURRENT STATE
 
-최종 갱신: 2026-10-25 (SESSION 08 진행 중 — Vercel 배포·정식 Supabase 로그인 확인, 스모크 일부·Cron·도메인 남음)
+최종 갱신: 2026-10-26 (SESSION 08 진행 중 — 도메인·Resend 연결 완료, Cron 첫 실행·시험 데이터 정리 남음)
 
 ## 세션 현황
 - 현재 세션: **SESSION 08 — QA 및 실제 배포 (IN_PROGRESS)**: 전체 테스트 재통과·보안 헤더 추가, **Vercel 배포(`hello-archive-jr-mvp-model.vercel.app`)와 정식 Supabase(`helloarchive beta -v`) 연결·코드 로그인·자녀 등록 확인(사용자 보고)**. 남은 것: 스모크 나머지, Cron(월 19시 KST), 도메인(`sessions/SESSION_08.md`, 체크리스트 `SETUP.md`).
@@ -63,8 +63,12 @@
 - **SESSION 06 미검증**: 프로덕션 404의 HTTP 상태 코드, 앱 화면 두 계정 교차 확인, iOS Safari, 스크린리더, 기록이 많을 때의 성능·가독성, 연 경계의 실제 동작(단위 테스트만). 분기·연 챕터가 부모에게 "책 같은 묶음"으로 느껴지는지, 챕터가 1개뿐인 초기 화면의 체감은 **가설**.
 - 자동화 테스트: 순수 로직(`test:unit`), DB(`test:rls`, `test:children`, `test:entries`). 인증·화면 테스트는 수동 검증만 했다.
 
-## 일시 중단 (2026-10-26, 사용자 선언)
-**도메인 구매·연결을 기다리며 작업을 잠정 중단했다.** 사용자가 돌아오면 재개: ① 도메인 구매(후보 `helloblank.net`, Spaceship 또는 Namecheap — 결제는 사용자가 직접, 영문 주소 입력 필요) ② 앱 주소 `archive.helloblank.net`을 Vercel에 추가 ③ Resend 도메인 인증 → Supabase SMTP 발신 주소·`EMAIL_FROM`·`NEXT_PUBLIC_APP_URL`·Site URL 변경·재배포 ④ 본인 외 이메일로 코드 메일 도착·스팸함 확인 ⑤ Cron 첫 실행(`email_deliveries`)·시험 데이터 정리 확인 후 SESSION 08 DONE → SESSION 09. 이 사이 사용자가 "비밀번호 회원가입으로 바꾸자"를 제안했으나 도메인 문제를 못 풀고 단계만 늘어 권하지 않았다(최종 결정은 사용자, 변경 지시는 없었다).
+## 도메인 연결 완료 (2026-10-26, 일시 중단 해제)
+- 도메인 `helloblank.net`을 Namecheap에서 구매(사용자). 앱 주소 **`https://archivejr.helloblank.net`**(Vercel 도메인, DNS CNAME). 기존 `hello-archive-jr-mvp-model.vercel.app`도 열린다(베타 부모에게는 새 주소만 안내).
+- Resend에 `helloblank.net` 인증(DKIM TXT·`rsend`/`send` CNAME·DMARC `p=none`)을 추가하고 Verified 확인(사용자 보고). Supabase SMTP 발신 주소 `hello@helloblank.net`, Site URL·Vercel `NEXT_PUBLIC_APP_URL`·`EMAIL_FROM` 변경 후 재배포(사용자 수행). **본인 외 이메일로 코드 메일 도착·로그인 확인은 사용자 보고**(Claude 미확인, 스팸 분류·도착 시간 미기록).
+- Claude가 외부에서 확인: 새 주소 `/`·`/login` 200, 보호 라우트 307, 크론 401, 보안 헤더·HSTS, DNS 5개 레코드 반영.
+- 남은 것: Vercel Cron 첫 실행(2026-10-26 월요일 19:00~19:59 KST, `email_deliveries`·Cron 로그 확인 — 시험 계정은 가입 주 규칙으로 대상이 아닐 수 있다), 시험 데이터 정리, 두 계정 교차 화면 확인, noindex 결정, 브랜드 페이지(루트 `helloblank.net`, 별도·후순위). 이후 SESSION 08 DONE → SESSION 09.
+- 정식 Supabase OTP는 6자리(개발용은 8자리).
 
 ## 진행 중인 작업
 SESSION 06은 `e327067`, SESSION 07 구현은 `da6fa68`까지 커밋됨(push는 사용자가 직접). 그 뒤 `createClient()`의 `io()` 추가와 문서는 별도 커밋. 변경: `src/lib/{weekly-email(.test),weekly-email-job,resend,email-consent}.ts`, `src/lib/supabase/admin.ts`, `src/app/api/cron/weekly-email/route.ts`, `src/app/actions/{settings,children}.ts`, `src/components/child-form.tsx`, `src/app/(app)/profile/page.tsx`, `supabase/tests/weekly-email.test.ts`, `vercel.json`, `package.json`, `.env.example`, `docs/handoff/*`.

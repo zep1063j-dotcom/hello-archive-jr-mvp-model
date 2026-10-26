@@ -1,4 +1,4 @@
-# SESSION 08 — QA 및 실제 배포 (IN_PROGRESS: 배포·로그인 확인됨, 스모크·Cron·모바일 일부 남음, 2026-10-25)
+# SESSION 08 — QA 및 실제 배포 (IN_PROGRESS: 도메인·메일 연결 완료, Cron 첫 실행·시험 데이터 정리 남음, 2026-10-26)
 
 ## 1. 목표
 통합 테스트, RLS·인증 보안 테스트, 모바일 점검, 입력 검증, 예외 처리, 접근성·성능, 환경 변수·비밀키 확인, Vercel 배포, 운영 스모크 테스트. 완료 조건: 베타테스터가 이용 가능한 서비스 배포.
@@ -20,6 +20,11 @@ SESSION 07까지 커밋(`362fc66`), 작업 트리 clean.
 - **장애와 원인**: 로그인 코드 요청이 "코드를 보내지 못했어요"로 실패, Vercel Runtime Logs에 `[auth] 로그인 코드 발송 실패 0`(연결 자체 실패 의미, 4회 동일). 원인은 `NEXT_PUBLIC_SUPABASE_URL` 값이 올바르지 않았던 것으로 추정(Sensitive 변수라 값을 볼 수 없어 삭제 후 `https://<ref>.supabase.co` 형태로 재입력·재배포). 정확히 어떤 값이 잘못이었는지는 확인하지 못했다. 교훈: 공개 변수(`NEXT_PUBLIC_*`)는 Sensitive로 저장하지 않고, URL에 `/rest/v1`·끝 `/`를 붙이지 않는다.
 - **사용자 보고(Claude가 직접 확인하지 못함)**: 정식 사이트에서 코드 로그인 후 자녀 등록까지 완료. 정식 DB 보안 SQL(RLS 5테이블 켜짐, 정책 개수, `anon` 권한 0줄) 및 Security Advisor 결과 "이상 없음".
 
+## 3-2. 도메인 연결 (2026-10-26)
+- `helloblank.net` 구매(Namecheap, 사용자 결제), 앱 서브도메인 `archivejr.helloblank.net`(Vercel, CNAME). Resend 인증 레코드: `resend._domainkey` TXT, `rsend`·`send` CNAME, `_dmarc` TXT(`p=none`), Enable Receiving은 끔. 레코드 입력 중 DKIM을 CNAME으로 잘못 선택해 "fully qualified domain name" 오류가 났고 TXT로 바꿔 해결.
+- Claude가 `dig`로 5개 레코드 반영과 새 주소 응답(200·307·401·404·보안 헤더·HSTS)을 확인. Supabase 발신 주소·Site URL, Vercel `NEXT_PUBLIC_APP_URL`·`EMAIL_FROM`, 재배포는 사용자가 수행. **본인 외 이메일로 코드 도착·로그인은 사용자 보고**(세부 미기록).
+- 로컬 `.env.local`은 개발용 값 유지(실수로 바꾼 두 줄을 개발용 값으로 복원, 원래 값은 보지 못해 `.env.example`·SETUP 기준으로 복원).
+
 ## 4. 테스트 결과
 | 항목 | 결과 |
 |---|---|
@@ -30,7 +35,7 @@ SESSION 07까지 커밋(`362fc66`), 작업 트리 clean.
 | 보안 헤더·보호 라우트·크론 401 (로컬 프로덕션 서버) | 확인 |
 
 ## 5. 미완료 · 사용자 준비물 (배포 차단 요소)
-1. **도메인**(아직 없음) — Resend 발신 도메인 인증, Vercel 주소. 없으면 본인 외 메일 불가(D-017).
+1. ~~도메인~~ — 완료(위 3-2).
 2. ~~정식 Supabase 프로젝트~~ — 완료(위 3-1).
 3. ~~Vercel 프로젝트·환경 변수~~ — 완료(위 3-1). 남은 것: `NEXT_PUBLIC_APP_URL`이 프로덕션 주소인지 재확인.
 4. 스모크(기록 저장·수정·삭제·아카이브·수신 동의·로그아웃·휴대폰)는 사용자가 끝냈다고 보고(Claude 미확인, 세부 결과 미기록). 남은 것: Vercel Cron 동작(2026-10-26 월요일 19시 KST 이후 `email_deliveries` 확인), 두 계정 교차 확인, 휴대폰·iOS Safari, 시험 데이터 정리, 도메인(본인 외 메일 발송에 필요).

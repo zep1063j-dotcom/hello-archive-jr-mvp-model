@@ -69,7 +69,7 @@ npm run test:weekly-email  # 주간 이메일 발송 작업(가짜 발송기, �
    <p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
    <p>이 코드는 잠시 후 만료돼요. 본인이 요청하지 않았다면 이 메일은 무시하셔도 돼요.</p>
    ```
-4. 코드 길이는 Authentication → Sign In / Providers → Email의 OTP 길이 설정이다(이 프로젝트는 8자리). 앱은 6~10자리를 받는다.
+4. 코드 길이는 Authentication → Sign In / Providers → Email의 OTP 길이 설정이다(개발용 프로젝트는 8자리, 정식 프로젝트는 6자리). 앱은 6~10자리를 받는다.
 5. 저장 후 **몇 분간은 옛 템플릿으로 발송될 수 있다**. 제목이 `Your sign-in link`(링크만)이면 시간이 지난 뒤 다시 시험한다.
 6. **도메인이 없으면 Resend 가입 이메일에만 발송**된다. 베타 전에 도메인을 구해 Resend에서 인증하고 발신 주소를 바꾼다. 정식(베타용) Supabase 프로젝트에도 2~4번을 다시 한다.
 7. 확인: 로그인 화면(`/login`)에서 본인 이메일로 코드를 받아 로그인하고 `/profile`에서 로그아웃. 같은 주소로는 1분에 한 번만 보낼 수 있다.
@@ -90,6 +90,9 @@ Vercel 예정. 아래는 순서이며 각 항목은 실행 후 결과를 SESSION
 5. 배포 후 스모크: `/` 200 → `/home` 비로그인 시 `/login` → 새 이메일로 코드 로그인(가입 경로) → 온보딩 → 기록 저장·수정·삭제 → 아카이브 → 수신 동의 켜기/끄기 → 로그아웃. 응답 헤더(보안 헤더) 확인.
 6. **Cron 확인**: Vercel 대시보드의 Cron Jobs에서 `0 10 * * 1,2`(UTC) 등록 확인, 가능하면 수동 실행 후 `email_deliveries`·응답 집계 확인. `CRON_SECRET` Bearer가 맞는지(401이면 변수 이름·값 불일치).
 7. 두 계정으로 서로의 기록이 안 보이는지 앱 화면에서 확인(Resend 도메인 인증 후 가능).
+
+### 배포 실제 값 메모 (비밀 아님)
+- 앱 주소 `https://archivejr.helloblank.net`, 발신 `Hello Archive jr <hello@helloblank.net>`. 공개 변수(`NEXT_PUBLIC_*`)와 `EMAIL_FROM`은 Vercel에서 Sensitive를 끈다. `NEXT_PUBLIC_*`은 빌드에 박히므로 바꾸면 Build Cache 없이 Redeploy. Supabase URL은 `https://<ref>.supabase.co`만(경로·끝 `/` 금지). 로컬 `.env.local`은 개발용 Supabase·`http://localhost:3000`을 유지한다.
 
 ## 브라우저 미리보기 (Claude Code 데스크톱)
 `.claude/launch.json`의 `dev`(npm run dev, 포트 3000) 또는 `prod-3100`(npm run start -p 3100, 먼저 `npm run build`)으로 미리보기를 시작할 수 있다. 다른 채팅의 dev 서버가 3000 포트를 쓰고 있으면 `prod-3100`을 쓴다.

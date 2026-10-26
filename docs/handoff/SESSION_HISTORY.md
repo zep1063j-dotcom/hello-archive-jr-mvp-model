@@ -116,3 +116,4 @@
 - 미완료: 스모크 나머지, Vercel Cron 첫 실행 확인, 도메인, 시험 데이터 정리, 두 계정·모바일 실기기. 여전히 IN_PROGRESS.
 - 사용자가 스모크 테스트를 모두 마쳤다고 보고(세부 결과 미기록). 도메인은 사용자가 곧 구매 예정. 남은 것은 도메인 연결, Cron 첫 실행 확인, 시험 데이터 정리.
 - 2026-10-26: 사용자가 도메인 구매·연결 대기로 **작업 잠정 중단**을 선언. 재개 절차는 `CURRENT_STATE.md`의 "일시 중단" 절. SESSION 08은 IN_PROGRESS 유지.
+- 2026-10-26 (재개): 도메인 `helloblank.net` 구매·`archivejr.helloblank.net` 연결, Resend 도메인 인증(DKIM·SPF CNAME·DMARC), Supabase 발신 주소·Site URL·Vercel 환경 변수 변경 후 재배포(사용자 수행). 본인 외 이메일 코드 도착·로그인 완료는 사용자 보고. 남은 것: Cron 첫 실행(오늘 19시대 KST) 확인, 시험 데이터 정리. 여전히 IN_PROGRESS.
