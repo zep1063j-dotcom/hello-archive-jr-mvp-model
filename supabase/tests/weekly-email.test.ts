@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { buildUnsubscribeUrl, unsubscribeWithToken } from "../../src/lib/unsubscribe.ts";
 import { runWeeklyEmailJob } from "../../src/lib/weekly-email-job.ts";
 import type { EmailMessage, SendResult } from "../../src/lib/weekly-email.ts";
 import type { Database } from "../../src/types/database";
@@ -21,6 +22,7 @@ if (!url || !publishableKey || !serviceKey) {
 const clientOptions = { auth: { persistSession: false, autoRefreshToken: false } };
 const service: Db = createClient<Database>(url, serviceKey, clientOptions);
 const APP_URL = "https://example.test";
+const UNSUBSCRIBE_SECRET = "test-only-secret";
 
 type TestUser = { id: string; email: string; client: Db; childId: string | null };
 
@@ -77,7 +79,7 @@ describe("주간 이메일 발송 작업 (실제 DB + 가짜 발송기)", () => 
   }
 
   const run = (nowIso: string) =>
-    runWeeklyEmailJob({ db: service, sender: fakeSender, appUrl: APP_URL, now: new Date(nowIso), sendIntervalMs: 0 });
+    runWeeklyEmailJob({ db: service, sender: fakeSender, appUrl: APP_URL, unsubscribeSecret: UNSUBSCRIBE_SECRET, now: new Date(nowIso), sendIntervalMs: 0 });
   const sentTo = (user: TestUser) => sent.filter((m) => m.to === user.email);
   const delivery = async (user: TestUser, week: string) => {
     const { data, error } = await service
@@ -148,6 +150,11 @@ describe("주간 이메일 발송 작업 (실제 DB + 가짜 발송기)", () => 
     assert.ok(mail.text.includes(`[weekly-test] 질문 ${WEEK}`));
     assert.ok(mail.text.includes(`${APP_URL}/write`));
     assert.ok(mail.idempotencyKey.startsWith(`weekly/${questionByWeek.get(WEEK)}/${A.id}/`));
+    // 수신 거부 링크는 부모별 서명이다 (다른 부모 것이 섞이지 않는다)
+    const unsubscribeA = buildUnsubscribeUrl(APP_URL, A.id, UNSUBSCRIBE_SECRET);
+    assert.ok(mail.text.includes(unsubscribeA));
+    assert.equal(mail.headers?.["List-Unsubscribe"], `<${unsubscribeA}>`);
+    assert.ok(!mail.text.includes(buildUnsubscribeUrl(APP_URL, E.id, UNSUBSCRIBE_SECRET)));
     assert.equal((await delivery(A, WEEK))?.status, "sent");
     assert.equal((await delivery(A, WEEK))?.attempts, 1);
 
@@ -261,5 +268,64 @@ describe("수신 동의 저장 (사용자 세션, 앱과 같은 쿼리)", () => 
       .update({ consent_updated_at: "2000-01-01T00:00:00Z" } as never)
       .eq("user_id", user.id);
     assert.ok(result.error, "컬럼 GRANT가 막아야 한다");
+  });
+});
+
+describe("수신 거부 링크 (서명 검증 + service role, 앱 액션과 같은 함수)", () => {
+  let target: TestUser;
+  let bystander: TestUser;
+  before(async () => {
+    target = await createTestUser("unsub-target", { consent: true, child: false });
+    bystander = await createTestUser("unsub-other", { consent: true, child: false });
+  });
+  after(async () => {
+    await service.auth.admin.deleteUser(target.id);
+    await service.auth.admin.deleteUser(bystander.id);
+  });
+
+  const consentOf = async (user: TestUser) => {
+    const { data, error } = await service
+      .from("parent_settings")
+      .select("email_consent")
+      .eq("user_id", user.id)
+      .single();
+    assert.ifError(error);
+    return data!.email_consent;
+  };
+  const tokenFor = (user: TestUser) =>
+    new URL(buildUnsubscribeUrl(APP_URL, user.id, UNSUBSCRIBE_SECRET)).searchParams.get("t")!;
+
+  it("틀린 서명·다른 부모의 서명으로는 아무것도 꺼지지 않는다", async () => {
+    const wrong = await unsubscribeWithToken({ db: service, userId: target.id, token: "bad", secret: UNSUBSCRIBE_SECRET });
+    assert.deepEqual(wrong, { ok: false, reason: "invalid" });
+    const borrowed = await unsubscribeWithToken({
+      db: service,
+      userId: target.id,
+      token: tokenFor(bystander),
+      secret: UNSUBSCRIBE_SECRET,
+    });
+    assert.deepEqual(borrowed, { ok: false, reason: "invalid" });
+    assert.equal(await consentOf(target), true);
+    assert.equal(await consentOf(bystander), true);
+  });
+
+  it("맞는 서명이면 그 부모만 꺼진다. 두 번 눌러도 안전하다", async () => {
+    const ok = await unsubscribeWithToken({
+      db: service,
+      userId: target.id,
+      token: tokenFor(target),
+      secret: UNSUBSCRIBE_SECRET,
+    });
+    assert.deepEqual(ok, { ok: true });
+    assert.equal(await consentOf(target), false);
+    assert.equal(await consentOf(bystander), true);
+
+    const again = await unsubscribeWithToken({
+      db: service,
+      userId: target.id,
+      token: tokenFor(target),
+      secret: UNSUBSCRIBE_SECRET,
+    });
+    assert.deepEqual(again, { ok: true });
   });
 });

@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ChildAvatar } from "@/components/child-avatar";
 import { EntryTimeline } from "@/components/home/entry-timeline";
 import { WeekComposer } from "@/components/home/week-composer";
+import { MissedQuestions } from "@/components/home/missed-questions";
 import { WeekStrip } from "@/components/home/week-strip";
 import { EmptyState } from "@/components/states";
 import { formatAge, weekStartOf } from "@/lib/date";
@@ -18,12 +20,18 @@ export function HomeHub({
   child,
   question,
   entries,
+  missed,
+  photoUrl,
   today,
 }: {
   child: Child;
   /** 이번 주 질문. 해당 주 질문이 없으면 null */
   question: WeeklyQuestion | null;
   entries: Entry[];
+  /** 아직 답하지 않은 지난 질문(최근 주 먼저, D-024) */
+  missed: WeeklyQuestion[];
+  /** 자녀 프로필 사진의 서명 URL. 없으면 별명 첫 글자 (D-027) */
+  photoUrl: string | null;
   today: string;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -49,12 +57,7 @@ export function HomeHub({
   return (
     <>
       <header className="flex items-center gap-4">
-        <span
-          aria-hidden
-          className="grid size-14 shrink-0 place-items-center rounded-full bg-blush-deep font-serif text-2xl font-bold text-brand-deep"
-        >
-          {child.nickname.charAt(0)}
-        </span>
+        <ChildAvatar nickname={child.nickname} photoUrl={photoUrl} />
         <div className="min-w-0 flex-1">
           <h1 className="font-serif text-2xl font-bold leading-tight">{child.nickname}</h1>
           <p className="text-sm text-ink-soft">{formatAge(child.birthDate, today)}</p>
@@ -81,8 +84,25 @@ export function HomeHub({
         <h2 id="weeks" className="mb-3 font-serif text-base font-bold">
           최근 8주
         </h2>
-        <WeekStrip weeks={weeks} onSelect={selectFromStrip} />
+        <WeekStrip
+          weeks={weeks}
+          missedWeekStarts={new Set(missed.map((item) => item.weekStart))}
+          onSelect={selectFromStrip}
+        />
+        <MissedQuestions missed={missed} />
       </section>
+
+      <Link
+        href="/yearly"
+        transitionTypes={["nav-forward"]}
+        className="flex min-h-14 items-center justify-between gap-3 border border-ink/30 px-4 hover:border-ink hover:bg-blush"
+      >
+        <span>
+          <span className="block font-serif font-bold">매년 같은 질문</span>
+          <span className="block text-[13px] text-ink-soft">1년 전의 아이와 지금의 아이를 나란히</span>
+        </span>
+        <span aria-hidden>↗</span>
+      </Link>
 
       <section aria-labelledby="timeline">
         <div className="mb-4 flex items-end justify-between gap-3 border-b border-ink pb-2">

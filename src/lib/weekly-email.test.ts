@@ -100,9 +100,10 @@ describe("발송 대상", () => {
 
 describe("메일 본문", () => {
   const appUrl = "https://example.com";
+  const unsubscribeUrl = "https://example.com/unsubscribe?u=u1&t=sig";
 
   it("질문·일반 링크·수신 설정 링크가 들어가고 로그인 토큰은 없다", () => {
-    const mail = buildWeeklyEmail({ questionBody: "요즘 아이가 자주 하는 말은?", hint: "힌트 문장", appUrl });
+    const mail = buildWeeklyEmail({ questionBody: "요즘 아이가 자주 하는 말은?", hint: "힌트 문장", appUrl, unsubscribeUrl });
     for (const part of [mail.html, mail.text]) {
       assert.ok(part.includes("요즘 아이가 자주 하는 말은?"));
       assert.ok(part.includes("힌트 문장"));
@@ -114,13 +115,13 @@ describe("메일 본문", () => {
   });
 
   it("힌트가 없으면 힌트 문단을 만들지 않는다", () => {
-    const mail = buildWeeklyEmail({ questionBody: "질문", hint: null, appUrl });
+    const mail = buildWeeklyEmail({ questionBody: "질문", hint: null, appUrl, unsubscribeUrl });
     assert.ok(!mail.html.includes("null"));
     assert.ok(!mail.text.includes("null"));
   });
 
   it("HTML 특수문자는 이스케이프한다", () => {
-    const mail = buildWeeklyEmail({ questionBody: `<b>"a" & 'b'</b>`, hint: null, appUrl });
+    const mail = buildWeeklyEmail({ questionBody: `<b>"a" & 'b'</b>`, hint: null, appUrl, unsubscribeUrl });
     assert.ok(!mail.html.includes("<b>"));
     assert.ok(mail.html.includes("&lt;b&gt;&quot;a&quot; &amp; &#39;b&#39;&lt;/b&gt;"));
     // 텍스트 본문은 원문 그대로

@@ -1,14 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { formatMonthDay } from "@/lib/date";
 import type { WeekSlot } from "@/lib/entries";
 
 // 최근 8주 기록 현황. 쓴 주를 누르면 아래 타임라인에서 그 기록이 펼쳐진다.
 export function WeekStrip({
   weeks,
+  missedWeekStarts,
   onSelect,
 }: {
   weeks: WeekSlot[];
+  /** 놓쳤지만 지금 쓸 수 있는 지난 질문의 주(D-024). 누르면 그 질문 쓰기로 이동한다 */
+  missedWeekStarts: Set<string>;
   onSelect: (entryId: string) => void;
 }) {
   return (
@@ -27,6 +31,14 @@ export function WeekStrip({
               >
                 ✓
               </button>
+            ) : missedWeekStarts.has(week.weekStart) ? (
+              <Link
+                href={`/write?week=${week.weekStart}`}
+                aria-label={`${formatMonthDay(week.weekStart)} 주 질문에 기록 남기기`}
+                className={`${base} border border-dashed border-brand text-brand hover:bg-blush`}
+              >
+                +
+              </Link>
             ) : (
               <span
                 aria-label={`${formatMonthDay(week.weekStart)} 주 ${week.isCurrent ? "아직 기록 전" : "기록 없음"}`}

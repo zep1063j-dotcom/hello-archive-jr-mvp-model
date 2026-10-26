@@ -3,16 +3,20 @@ import { Suspense } from "react";
 import { signOut } from "@/app/actions/auth";
 import { Eyebrow, PageSkeleton } from "@/components/states";
 import { ChildForm } from "@/components/child-form";
+import { ChildPhotoEditor } from "@/components/child-photo-editor";
 import { setEmailConsent } from "@/app/actions/settings";
 import { requireUser } from "@/lib/auth";
+import { CONTACT_EMAIL, contactHref } from "@/lib/contact";
 import { earliestBirthDate } from "@/lib/child-validation";
 import { requireChild } from "@/lib/children";
 import { getMyEmailConsent } from "@/lib/email-consent";
+import { getChildPhotoUrl } from "@/lib/photos";
 import { formatAge, formatKoreanDate, todayKst } from "@/lib/date";
 
 export const metadata = { title: "프로필 · Hello Archive jr" };
 
-// 자녀 정보 조회·수정, 주간 이메일 수신 설정, 로그아웃이 동작한다. 데이터 삭제 요청은 아직 연결하지 않았다.
+// 자녀 정보 조회·수정, 주간 이메일 수신 설정, 로그아웃이 동작한다.
+// 의견·데이터 삭제 요청은 앱 기능이 아니라 문의 메일(mailto)로 받고 운영자가 수동 처리한다 (BETA.md 7절).
 export default function ProfilePage(props: PageProps<"/profile">) {
   return (
     <>
@@ -47,13 +51,21 @@ export default function ProfilePage(props: PageProps<"/profile">) {
             로그아웃
           </button>
         </form>
-        <button
-          type="button"
-          disabled
-          className="min-h-12 px-1 text-left text-sm text-ink-mute underline underline-offset-4"
+        <a
+          href={contactHref("[Hello Archive jr] 의견 보내기")}
+          className="flex min-h-12 items-center px-1 text-sm text-ink-soft underline underline-offset-4"
         >
-          데이터 삭제 요청 (준비 중)
-        </button>
+          의견 보내기
+        </a>
+        <a
+          href={contactHref("[Hello Archive jr] 데이터 삭제 요청")}
+          className="flex min-h-12 items-center px-1 text-sm text-ink-soft underline underline-offset-4"
+        >
+          데이터 삭제 요청
+        </a>
+        <p className="px-1 text-xs leading-relaxed text-ink-mute">
+          메일로 보내 주시면 확인 후 처리해 드려요. 문의 {CONTACT_EMAIL}
+        </p>
       </section>
     </>
   );
@@ -79,6 +91,7 @@ async function ChildSection({
   const { edit, saved } = await searchParams;
   const today = todayKst();
   const editing = edit === "1";
+  const photoUrl = await getChildPhotoUrl(child.photoPath);
 
   return (
     <section aria-labelledby="child">
@@ -88,6 +101,7 @@ async function ChildSection({
       >
         아이
       </h2>
+      <ChildPhotoEditor nickname={child.nickname} photoUrl={photoUrl} />
       {editing ? (
         <div className="mt-5">
           <ChildForm

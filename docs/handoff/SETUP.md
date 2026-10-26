@@ -24,7 +24,10 @@ npm run test:unit  # 순수 로직 단위 테스트 (DB 불필요, SESSION 04~)
 npm run test:rls   # DB 교차 접근 테스트 (.env.local + 개발용 Supabase 필요, SESSION 02~)
 npm run test:children  # 자녀 프로필 앱 쿼리·동시 등록 테스트 (개발용 Supabase, 마이그레이션 3개 적용 필요)
 npm run test:entries   # 기록 앱 쿼리·두 계정 교차·동시 insert (개발용 Supabase)
-npm run test:weekly-email  # 주간 이메일 발송 작업(가짜 발송기, 실제 메일 없음)·수신 동의 (개발용 Supabase)
+npm run test:weekly-email  # 주간 이메일 발송 작업(가짜 발송기, 실제 메일 없음)·수신 동의·수신 거부 링크 (개발용 Supabase)
+npm run test:choices   # 질문 은행·부모별 질문 선택 (개발용 Supabase, 마이그레이션 20261026000000 필요)
+npm run test:yearly    # 매년 같은 질문 답 (개발용 Supabase, 마이그레이션 20261026000100 필요)
+npm run test:photos    # 사진 Storage·DB (개발용 Supabase, 마이그레이션 20261026000200 필요)
 ```
 
 ## 환경 변수 (이름만 — `.env.example` 참고)
@@ -93,6 +96,17 @@ Vercel 예정. 아래는 순서이며 각 항목은 실행 후 결과를 SESSION
 
 ### 배포 실제 값 메모 (비밀 아님)
 - 앱 주소 `https://archivejr.helloblank.net`, 발신 `Hello Archive jr <hello@helloblank.net>`. 공개 변수(`NEXT_PUBLIC_*`)와 `EMAIL_FROM`은 Vercel에서 Sensitive를 끈다. `NEXT_PUBLIC_*`은 빌드에 박히므로 바꾸면 Build Cache 없이 Redeploy. Supabase URL은 `https://<ref>.supabase.co`만(경로·끝 `/` 금지). 로컬 `.env.local`은 개발용 Supabase·`http://localhost:3000`을 유지한다.
+
+## 마이그레이션 적용 순서 (SESSION 09 추가분) — 앱 배포보다 먼저
+개발용·정식 Supabase 모두 SQL Editor에서 **이 순서**로 실행한다(이미 적용한 파일은 다시 실행하지 않는다). 사용자가 직접 실행한다.
+1. `supabase/migrations/20261026000000_question_bank_and_choices.sql` (질문 은행·부모별 질문 선택, D-025)
+2. `supabase/seed/question_bank.sql` (예시 질문 100개) 와 `supabase/seed/weekly_questions.sql` (52주로 확장, 여러 번 실행해도 안전)
+3. `supabase/migrations/20261026000100_yearly_answers.sql` (매년 같은 질문, D-026)
+4. `supabase/migrations/20261026000200_photos.sql` (사진: `children.photo_path`, `entry_photos`, 비공개 버킷 `photos`와 Storage 정책, D-027). `storage.objects` 정책 생성에서 소유자 권한 오류가 나면 대시보드 Storage → Policies에서 같은 조건(버킷 `photos`, 첫 폴더 = `auth.uid()`)으로 select/insert/delete 정책을 만든다.
+적용 뒤 개발 DB에서 `npm run test:choices`, `npm run test:yearly`, `npm run test:photos`를 실행한다(새 마이그레이션이 없으면 실패한다). 정식 DB에는 테스트를 돌리지 않는다.
+
+## 베타 지표 조회 (SESSION 09, D-023)
+정식 Supabase 대시보드 > SQL Editor에서 `supabase/analytics/beta_metrics.sql`의 쿼리 4개를 **하나씩** 복사해 실행한다(여러 문장을 동시에 실행하면 마지막 결과만 보인다). 먼저 각 쿼리 맨 위 `excluded` 배열에 운영자·시험 계정 user_id를 넣는다. 본문·이메일은 조회하지 않는다. 지표 정의와 판단 기준은 `BETA.md`.
 
 ## 브라우저 미리보기 (Claude Code 데스크톱)
 `.claude/launch.json`의 `dev`(npm run dev, 포트 3000) 또는 `prod-3100`(npm run start -p 3100, 먼저 `npm run build`)으로 미리보기를 시작할 수 있다. 다른 채팅의 dev 서버가 3000 포트를 쓰고 있으면 `prod-3100`을 쓴다.

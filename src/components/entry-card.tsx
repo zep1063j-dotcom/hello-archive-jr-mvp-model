@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PhotoStrip } from "@/components/entry-photo-field";
 import { toKstDateKey } from "@/lib/date";
 import type { Entry } from "@/types/archive";
 
@@ -28,6 +29,11 @@ export function EntryCard({ entry }: { entry: Entry }) {
         <p className="mt-2 line-clamp-3 font-serif leading-[1.85] text-ink">
           {entry.body}
         </p>
+        {entry.photos.length > 0 && (
+          <div className="mt-3">
+            <PhotoStrip photos={entry.photos} size="sm" />
+          </div>
+        )}
       </div>
     </Link>
   );

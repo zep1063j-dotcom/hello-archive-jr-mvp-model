@@ -14,18 +14,54 @@ export async function getMyChild(): Promise<Child | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("children")
-    .select("id, nickname, birth_date")
+    .select("id, nickname, birth_date, created_at, photo_path")
     .eq("user_id", user.id)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
 
   if (error) {
+    // 사진 마이그레이션(20261026000200)이 아직 적용되지 않은 DB: 모든 화면이 이 함수를 쓰므로 멈추지 않게
+    // photo_path 없이 다시 읽는다 (배포 순서 실수 대비. 정상 운영에서는 일어나지 않아야 하며 로그에 남긴다).
+    if (error.code === "42703") {
+      console.error("[children] photo_path 컬럼이 없어요. 마이그레이션을 적용하세요.");
+      return getMyChildWithoutPhoto(user.id);
+    }
     console.error("[children] 자녀 조회 실패", error.code);
     throw new Error("자녀 정보를 불러오지 못했어요.");
   }
   return data
-    ? { id: data.id, nickname: data.nickname, birthDate: data.birth_date }
+    ? {
+        id: data.id,
+        nickname: data.nickname,
+        birthDate: data.birth_date,
+        createdAt: data.created_at,
+        photoPath: data.photo_path,
+      }
+    : null;
+}
+
+async function getMyChildWithoutPhoto(userId: string): Promise<Child | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("children")
+    .select("id, nickname, birth_date, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error("[children] 자녀 조회 실패", error.code);
+    throw new Error("자녀 정보를 불러오지 못했어요.");
+  }
+  return data
+    ? {
+        id: data.id,
+        nickname: data.nickname,
+        birthDate: data.birth_date,
+        createdAt: data.created_at,
+        photoPath: null,
+      }
     : null;
 }
 

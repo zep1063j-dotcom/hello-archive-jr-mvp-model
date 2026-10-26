@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 // 로그인 후 돌아갈 수 있는 경로. 외부 주소·로그인 페이지로의 이탈(open redirect)을 막기 위해
 // 앱 안의 보호 화면만 허용한다.
-const SAFE_NEXT_PREFIXES = ["/home", "/write", "/archive", "/profile"];
+const SAFE_NEXT_PREFIXES = ["/home", "/write", "/archive", "/profile", "/yearly"];
 export const DEFAULT_AFTER_LOGIN = "/home";
 
 export function safeNextPath(next: unknown): string {

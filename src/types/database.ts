@@ -4,6 +4,7 @@
 // 클라이언트가 쓸 수 없는 컬럼(created_at 등)은 Insert/Update에서 뺐다 — GRANT와 맞춘 것이다.
 
 export type EmailDeliveryStatus = "processing" | "sent" | "failed" | "skipped";
+export type QuestionChoiceSource = "bank" | "custom";
 
 export type Database = {
   public: {
@@ -27,11 +28,13 @@ export type Database = {
           nickname: string;
           /** YYYY-MM-DD */
           birth_date: string;
+          /** Storage 버킷 photos 안의 경로 `<부모 id>/<파일명>` (D-027) */
+          photo_path: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: { user_id: string; nickname: string; birth_date: string };
-        Update: { nickname?: string; birth_date?: string };
+        Update: { nickname?: string; birth_date?: string; photo_path?: string | null };
         Relationships: [];
       };
       weekly_questions: {
@@ -45,6 +48,65 @@ export type Database = {
         // 읽기 전용(시드로만 관리). 클라이언트 쓰기 권한이 없다.
         Insert: { week_start: string; body: string; hint?: string | null };
         Update: { body?: string; hint?: string | null };
+        Relationships: [];
+      };
+      question_bank: {
+        Row: { id: string; body: string; created_at: string };
+        // 읽기 전용(시드로만 관리). 클라이언트 쓰기 권한이 없다.
+        Insert: { body: string };
+        Update: { body?: string };
+        Relationships: [];
+      };
+      week_question_choices: {
+        Row: {
+          id: string;
+          user_id: string;
+          weekly_question_id: string;
+          source: QuestionChoiceSource;
+          bank_question_id: string | null;
+          body: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          weekly_question_id: string;
+          source: QuestionChoiceSource;
+          bank_question_id?: string | null;
+          body: string;
+        };
+        // 주·소유자는 바꿀 수 없다. 그 주에 기록이 있으면 RLS가 수정·삭제를 막는다(0행).
+        Update: { source?: QuestionChoiceSource; bank_question_id?: string | null; body?: string };
+        Relationships: [];
+      };
+      yearly_answers: {
+        Row: {
+          id: string;
+          user_id: string;
+          child_id: string;
+          /** 한국 시간 기준 달력 연도 */
+          year: number;
+          question_key: string;
+          body: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          child_id: string;
+          year: number;
+          question_key: string;
+          body: string;
+        };
+        // 생성 후에는 본문만 수정할 수 있다.
+        Update: { body?: string };
+        Relationships: [];
+      };
+      entry_photos: {
+        Row: { id: string; user_id: string; entry_id: string; path: string; created_at: string };
+        Insert: { user_id: string; entry_id: string; path: string };
+        // 생성 후 수정할 수 없다(지우고 다시 올린다). 기록당 최대 3장(DB 트리거).
+        Update: Record<string, never>;
         Relationships: [];
       };
       entries: {

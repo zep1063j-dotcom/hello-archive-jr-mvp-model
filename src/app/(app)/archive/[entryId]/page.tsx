@@ -44,7 +44,7 @@ async function EntryDetail({
             {entry.question.body}
           </h1>
         </header>
-        <EntryDetailBody entryId={entry.id} body={entry.body} />
+        <EntryDetailBody entryId={entry.id} body={entry.body} photos={entry.photos} />
         <footer className="mt-10 border-t border-line pt-4 text-xs leading-relaxed text-ink-mute">
           <p>
             작성{" "}

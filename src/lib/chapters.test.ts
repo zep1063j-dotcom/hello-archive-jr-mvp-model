@@ -15,6 +15,7 @@ function entryAt(id: string, createdAt: string): Entry {
   return {
     id,
     body: "본문",
+    photos: [],
     createdAt,
     updatedAt: createdAt,
     question: { id: `q-${id}`, weekStart: "2026-01-05", body: "질문" },

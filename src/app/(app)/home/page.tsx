@@ -3,7 +3,8 @@ import { HomeHub } from "@/components/home/home-hub";
 import { PageSkeleton } from "@/components/states";
 import { requireChild } from "@/lib/children";
 import { todayKst } from "@/lib/date";
-import { getMyEntries, getThisWeekQuestion } from "@/lib/my-entries";
+import { getMissedQuestions, getMyEntries, getThisWeekQuestion } from "@/lib/my-entries";
+import { getChildPhotoUrl } from "@/lib/photos";
 
 export const metadata = { title: "홈 · Hello Archive jr" };
 
@@ -18,12 +19,21 @@ export default function HomePage() {
 
 async function HomeContent() {
   const child = await requireChild("/home");
-  const [question, entries] = await Promise.all([
+  const [question, entries, photoUrl] = await Promise.all([
     getThisWeekQuestion(),
     getMyEntries(child.id),
+    getChildPhotoUrl(child.photoPath),
   ]);
+  const missed = await getMissedQuestions(child, entries);
 
   return (
-    <HomeHub child={child} question={question} entries={entries} today={todayKst()} />
+    <HomeHub
+      child={child}
+      question={question}
+      entries={entries}
+      missed={missed}
+      photoUrl={photoUrl}
+      today={todayKst()}
+    />
   );
 }

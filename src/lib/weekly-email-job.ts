@@ -4,6 +4,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/database.ts";
 import { toKstDateKey, weekStartOf } from "./date.ts";
+import { buildUnsubscribeUrl } from "./unsubscribe.ts";
 import {
   buildWeeklyEmail,
   decideDelivery,
@@ -36,11 +37,13 @@ export async function runWeeklyEmailJob(options: {
   sender: EmailSender;
   /** 끝 슬래시 없는 앱 주소 */
   appUrl: string;
+  /** 수신 거부 링크 서명 키 (운영에서는 CRON_SECRET, D-024) */
+  unsubscribeSecret: string;
   now?: Date;
   /** 발송 사이 간격(ms). Resend 한도를 확인하지 못해 기본 600ms. */
   sendIntervalMs?: number;
 }): Promise<WeeklyEmailSummary> {
-  const { db, sender, appUrl } = options;
+  const { db, sender, appUrl, unsubscribeSecret } = options;
   const now = options.now ?? new Date();
   const interval = options.sendIntervalMs ?? 600;
 
@@ -68,8 +71,6 @@ export async function runWeeklyEmailJob(options: {
     .maybeSingle();
   if (questionError) throw new Error(`question_query_${questionError.code}`);
   if (!question) return { ...summary, status: "no_question" };
-
-  const mail = buildWeeklyEmail({ questionBody: question.body, hint: question.hint, appUrl });
 
   // 동의한 부모 → 자녀가 있는 부모 → 대상
   const { data: consenting, error: settingsError } = await db
@@ -188,6 +189,13 @@ export async function runWeeklyEmailJob(options: {
     } else {
       if (!firstSend && interval > 0) await sleep(interval);
       firstSend = false;
+      // 수신 거부 링크는 부모별 서명이라 메일을 부모마다 만든다.
+      const mail = buildWeeklyEmail({
+        questionBody: question.body,
+        hint: question.hint,
+        appUrl,
+        unsubscribeUrl: buildUnsubscribeUrl(appUrl, userId, unsubscribeSecret),
+      });
       result = await sender({
         to,
         ...mail,

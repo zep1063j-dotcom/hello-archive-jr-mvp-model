@@ -64,6 +64,8 @@ export type EmailMessage = {
   text: string;
   /** 같은 요청의 중복 발송 방지(Resend Idempotency-Key) */
   idempotencyKey: string;
+  /** 추가 메일 헤더 (예: List-Unsubscribe) */
+  headers?: Record<string, string>;
 };
 
 /** ok:false의 code는 로그·DB에 남겨도 되는 짧은 코드(주소·본문 금지) */
@@ -85,18 +87,21 @@ function escapeHtml(value: string): string {
 
 /**
  * 메일 본문. 질문(모든 부모 동일)과 일반 링크만 담는다 — 로그인 토큰·자녀 정보·추적 요소 없음.
+ * 수신 거부 링크(`unsubscribeUrl`)는 부모별 서명 링크지만 수신 동의를 끄는 것 외의 권한이 없다 (D-024).
  * `appUrl`은 끝 슬래시 없이 받는다(예: https://example.com).
  */
 export function buildWeeklyEmail(input: {
   questionBody: string;
   hint: string | null;
   appUrl: string;
-}): { subject: string; html: string; text: string } {
+  unsubscribeUrl: string;
+}): { subject: string; html: string; text: string; headers: Record<string, string> } {
   const writeUrl = `${input.appUrl}/write`;
   const profileUrl = `${input.appUrl}/profile`;
   const subject = "이번 주 질문이 도착했어요";
   const question = escapeHtml(input.questionBody);
   const hint = input.hint ? escapeHtml(input.hint) : null;
+  const unsubscribeHtmlUrl = escapeHtml(input.unsubscribeUrl);
 
   const html = `<div style="font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111;line-height:1.7">
 <p style="font-size:13px;color:#555;margin:0 0 8px">Hello Archive jr · 이번 주 질문</p>
@@ -104,7 +109,7 @@ export function buildWeeklyEmail(input: {
 ${hint ? `<p style="font-size:14px;color:#555;margin:0 0 20px">${hint}</p>` : ""}
 <p style="margin:24px 0"><a href="${writeUrl}" style="display:inline-block;background:#d92f3e;color:#fff;text-decoration:none;padding:12px 20px;font-weight:600">기록 남기러 가기</a></p>
 <p style="font-size:13px;color:#555;margin:0 0 4px">한두 줄만 적어도 첫 기록이 돼요. 이번 주 일요일까지 남길 수 있어요.</p>
-<p style="font-size:12px;color:#777;margin:24px 0 0">이 메일을 더 받고 싶지 않다면 <a href="${profileUrl}" style="color:#777">프로필</a>에서 수신을 끌 수 있어요.</p>
+<p style="font-size:12px;color:#777;margin:24px 0 0">이 메일을 더 받고 싶지 않다면 <a href="${unsubscribeHtmlUrl}" style="color:#777">수신 거부</a>를 눌러 주세요. <a href="${profileUrl}" style="color:#777">프로필</a>에서도 바꿀 수 있어요.</p>
 </div>`;
 
   const text = [
@@ -116,8 +121,12 @@ ${hint ? `<p style="font-size:14px;color:#555;margin:0 0 20px">${hint}</p>` : ""
     `기록 남기러 가기: ${writeUrl}`,
     "한두 줄만 적어도 첫 기록이 돼요. 이번 주 일요일까지 남길 수 있어요.",
     "",
-    `수신을 끄려면 프로필에서 바꿀 수 있어요: ${profileUrl}`,
+    `이 메일을 더 받고 싶지 않다면 수신 거부: ${input.unsubscribeUrl}`,
+    `프로필에서도 바꿀 수 있어요: ${profileUrl}`,
   ].join("\n");
 
-  return { subject, html, text };
+  // 메일 앱의 "구독 취소" 버튼용. 링크를 여는 것만으로는 꺼지지 않고 확인 화면에서 버튼을 눌러야 한다.
+  const headers = { "List-Unsubscribe": `<${input.unsubscribeUrl}>` };
+
+  return { subject, html, text, headers };
 }

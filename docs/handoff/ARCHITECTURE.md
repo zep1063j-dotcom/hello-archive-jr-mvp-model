@@ -20,11 +20,15 @@ src/
     weekly-email-job.ts  # 발송 작업: DB·발송기 주입, 멱등·보정형 (SESSION 07)
     resend.ts            # Resend REST 발송, 서버 전용 (SESSION 07)
     email-consent.ts     # 수신 동의 조회·저장(사용자 세션), 서버 전용 (SESSION 07)
+    past-questions.ts    # 지난 질문 쓰기 규칙, 순수 TS (D-024)
+    entry-search.ts      # 기록 검색어 정리·LIKE 이스케이프, 순수 TS (D-024)
+    unsubscribe.ts       # 수신 거부 링크 서명·검증·처리, DB는 주입 (D-024)
     supabase/admin.ts    # service role 클라이언트. 예약 실행에서만 (SESSION 07)
   types/          # DB 타입 등
 supabase/
   migrations/     # SQL 마이그레이션 (SESSION 02)
   seed/           # 주간 질문 시드 (SESSION 02/05)
+  analytics/      # 베타 지표 조회 SQL, 대시보드 SQL Editor에서 수동 실행 (SESSION 09, D-023)
 docs/handoff/     # 인수인계 문서
 ```
 
@@ -40,11 +44,14 @@ docs/handoff/     # 인수인계 문서
 | `/onboarding` | 별도(`src/app/onboarding`, 내비 없는 화면) | 첫 로그인 시 자녀 등록. 자녀가 없으면 `requireChild()`가 `?next=`와 함께 이곳으로 보낸다. 구현됨 | 04 |
 | `/home` | app | 대시보드: 이번 주 질문 CTA, 최근 기록 | 01 |
 | `/write` | app | 이번 주 질문 + 기록 작성/수정, 홈의 이번 주 카드와 같은 컴포넌트를 펼쳐서 보여줌 (**이메일 딥링크 목적지**). 구현됨 | 05 |
-| `/archive` | app | 타임라인(최신 먼저, 월별 묶음) + 챕터 목록 링크. 구현됨 | 06 |
+| `/archive` | app | 타임라인(최신 먼저, 월별 묶음) + 챕터 목록 링크 + 본문 검색(`?q=`, D-024). 구현됨 | 06, 09 |
 | `/archive/[entryId]` | app | 기록 상세 + 수정·삭제(05 구현됨), 기간·정리는 06 | 05, 06 |
 | `/archive/chapters/[period]` | app | `1m` 미니챕터 / `3m` 이야기집 / `1y` 기록집의 **챕터 목록**(기록 있는 구간만). 구현됨 | 06 |
 | `/archive/chapters/[period]/[chapterKey]` | app | 챕터 상세. 키 `2026-10`·`2026-q4`·`2026`, 구간 `[start,end)` KST, 작성일 기준, 오래된 기록 먼저. 구현됨 (D-021) | 06 |
 | `/profile` | app | 자녀 조회·수정(`?edit=1`), 주간 이메일 수신 켜기/끄기, 로그아웃 구현됨 / 데이터 삭제 요청은 미구현 | 04, 07 |
+| `/write?week=YYYY-MM-DD` | app | 놓친 지난 질문에 기록(D-024). 쓸 수 없는 주는 안내 화면 | 09 |
+| `/yearly` | app | 매년 같은 질문 5개: 지금 연도 답 쓰기·수정, 지난 연도 읽기 전용으로 나란히 (D-026) | 09 |
+| `/unsubscribe?u=&t=` | public | 메일의 수신 거부 링크 → 확인 화면 → 버튼으로 끔. 서명(HMAC) 검증, 로그인 불필요 (D-024) | 09 |
 | `/api/cron/weekly-email` | route handler | 예약 실행 진입점(`vercel.json`: 월·화 10:00 UTC = 19:00 KST). `CRON_SECRET` Bearer 검증, 집계 JSON만 응답. 구현됨, 실제 발송·Cron 동작은 미검증 (D-022) | 07 |
 
 > **SESSION 03 구현 현황**: `/login`, `src/proxy.ts`(보호 라우트), `(app)` 레이아웃 서버 검증, 프로필 로그아웃. 보호 대상 matcher: `/login`, `/onboarding`, `/home`, `/write`, `/archive/:path*`, `/profile`.
@@ -116,6 +123,9 @@ docs/handoff/     # 인수인계 문서
 
 - 인덱스: `(user_id, created_at desc)`, `(child_id, created_at desc)`.
 - 타임라인 정렬 기준은 `created_at desc`. 기간 묶음은 달력 월·분기·연 고정 구간을 KST 반개구간 `[start, end)`로 정의하고 `created_at`의 KST 날짜로 소속을 정한다 (`src/lib/chapters.ts`, D-021).
+
+### 세션 09 추가 테이블 (SQL은 `supabase/migrations/20261026000*`, 결정 D-025~D-027)
+- `question_bank`(읽기 전용 예시 질문), `week_question_choices`(부모·주별 질문 바꾸기, 기록이 있으면 RLS가 변경 차단), `yearly_answers`(자녀·연도·질문 키별 답), `entry_photos`(기록당 3장, 경로만), `children.photo_path`, `entries unique (id, user_id)`. 사진 파일은 비공개 Storage 버킷 `photos`(`<부모 id>/<파일>`), 보여줄 때 서명 URL.
 
 ### email_deliveries
 | 컬럼 | 타입 | 비고 |

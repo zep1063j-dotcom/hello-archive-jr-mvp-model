@@ -22,6 +22,7 @@ export async function sendWithResend(message: EmailMessage): Promise<SendResult>
         subject: message.subject,
         html: message.html,
         text: message.text,
+        ...(message.headers ? { headers: message.headers } : {}),
       }),
       signal: AbortSignal.timeout(15_000),
     });

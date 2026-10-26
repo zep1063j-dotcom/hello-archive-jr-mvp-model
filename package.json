@@ -12,7 +12,10 @@
     "test:children": "node --env-file=.env.local --test supabase/tests/children-app.test.ts",
     "test:entries": "node --env-file=.env.local --test supabase/tests/entries-app.test.ts",
     "test:rls": "node --env-file=.env.local --test supabase/tests/rls.test.ts",
-    "test:weekly-email": "node --env-file=.env.local --test supabase/tests/weekly-email.test.ts"
+    "test:weekly-email": "node --env-file=.env.local --test supabase/tests/weekly-email.test.ts",
+    "test:choices": "node --env-file=.env.local --test supabase/tests/question-choices.test.ts",
+    "test:yearly": "node --env-file=.env.local --test supabase/tests/yearly-app.test.ts",
+    "test:photos": "node --env-file=.env.local --test supabase/tests/photos-app.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

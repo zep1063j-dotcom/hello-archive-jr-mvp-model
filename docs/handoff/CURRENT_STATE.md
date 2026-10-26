@@ -1,12 +1,15 @@
 # CURRENT STATE
 
-최종 갱신: 2026-10-26 (SESSION 08 진행 중 — 도메인·Resend 연결 완료, Cron 첫 실행·시험 데이터 정리 남음)
+최종 갱신: 2026-10-26 (SESSION 08 진행 중 — Cron 첫 실행·시험 데이터 정리 남음 / SESSION 09 병행 시작 — 지표 쿼리·베타 운영안 초안)
 
 ## 세션 현황
 - 현재 세션: **SESSION 08 — QA 및 실제 배포 (IN_PROGRESS)**: 전체 테스트 재통과·보안 헤더 추가, **Vercel 배포(`hello-archive-jr-mvp-model.vercel.app`)와 정식 Supabase(`helloarchive beta -v`) 연결·코드 로그인·자녀 등록 확인(사용자 보고)**. 남은 것: 스모크 나머지, Cron(월 19시 KST), 도메인(`sessions/SESSION_08.md`, 체크리스트 `SETUP.md`).
 - 직전 완료 세션: **SESSION 07 — 주간 이메일 자동화 (DONE)**. 구현·로컬 검증에 더해 실제 Resend 발송 1통이 사용자 받은편지함에 도착함을 확인했다(발송 작업 직접 호출). Vercel Cron 실동작은 SESSION 08.
 - 마지막 완료 세션: **SESSION 06 — 성장 아카이브** (DONE, 2026-10-25). 그 전: 05 (질문·기록), 04 (자녀), 03 (인증), 02 (DB), 01 (UI/UX), 00.
 - 진행 단계: 전체 10세션(00~09) 중 00~06 완료(7개), 07 진행 중, 08~09 남음.
+
+- **베타 전 추가 기능 구현됨(D-024~D-027, 로컬·임시 DB 검증, 새 DB 변경은 개발/정식 DB에 미적용)**: 지난 질문 쓰기, 기록 검색, 메일 수신 거부 링크, 질문 은행·이모티콘 교체·직접 질문, 매년 같은 질문 `/yearly`, 프로필·기록 사진. **새 마이그레이션 3개(`20261026000000/100/200`)와 시드는 개발 DB에 적용·검증됨(2026-10-27, `test:choices`·`yearly`·`photos` 통과, 화면 확인). 정식 DB에는 적용 전이다(SETUP.md 순서, 앱 배포보다 먼저).** 적용 전에도 홈·기록은 멈추지 않게 보강했다.
+- **병행 진행: SESSION 09 — 베타 운영 준비 (IN_PROGRESS)**: `supabase/analytics/beta_metrics.sql`(지표 쿼리 4개, D-023, 임시 Postgres로만 검증·정식 DB 미실행), `BETA.md`(성공 기준 초안·피드백 구조·백로그·삭제 절차). 앱 코드 변경 없음. 사용자 확정 대기: 성공 기준, 문의 이메일, 참여 부모 5명 (`sessions/SESSION_09.md`).
 
 ## 구현 완료된 것
 - SESSION 00: Next.js 16.4.3 / React 19.3.0 / TypeScript / Tailwind v4 / ESLint 스캐폴드, 폴더 구조, `.env.example`, 문서 시스템.

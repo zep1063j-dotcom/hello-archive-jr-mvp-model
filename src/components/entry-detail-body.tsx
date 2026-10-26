@@ -7,6 +7,8 @@ import {
   type DeleteEntryState,
 } from "@/app/actions/entries";
 import { canSubmitBody, EntryBodyField } from "@/components/entry-body-field";
+import { EntryPhotoField, PhotoStrip, useEntryPhotos } from "@/components/entry-photo-field";
+import type { EntryPhoto } from "@/types/archive";
 
 type Mode = "view" | "edit" | "confirm-delete";
 
@@ -17,7 +19,15 @@ const secondaryButton =
 
 // 기록 상세의 본문 + 수정·삭제. 삭제는 되돌릴 수 없어 한 번 더 확인한다.
 // 수정은 이번 주가 아닌 지난 기록에도 허용한다(오타 수정 등, 본문만 바뀐다).
-export function EntryDetailBody({ entryId, body }: { entryId: string; body: string }) {
+export function EntryDetailBody({
+  entryId,
+  body,
+  photos: savedPhotos,
+}: {
+  entryId: string;
+  body: string;
+  photos: EntryPhoto[];
+}) {
   const [mode, setMode] = useState<Mode>("view");
   const [draft, setDraft] = useState(body);
   const [saving, setSaving] = useState(false);
@@ -28,7 +38,8 @@ export function EntryDetailBody({ entryId, body }: { entryId: string; body: stri
     deleteEntry,
     {},
   );
-  const pending = saving || deleting;
+  const photos = useEntryPhotos(savedPhotos);
+  const pending = saving || deleting || photos.busy;
   // 저장 직후 서버 데이터가 도착하기 전까지 방금 저장한 내용을 보여준다 (옛 본문이 잠깐 보이는 것을 막는다).
   const [savedBody, setSavedBody] = useState<string | null>(null);
   const [seenBody, setSeenBody] = useState(body);
@@ -54,7 +65,16 @@ export function EntryDetailBody({ entryId, body }: { entryId: string; body: stri
         setError(result.error);
         return;
       }
+      if (photos.queued.length > 0) {
+        const upload = await photos.uploadQueued(entryId);
+        if (upload.failed > 0) {
+          setSavedBody(draft.trim());
+          setError(`글은 저장했어요. 사진 ${upload.failed}장은 올리지 못했어요. ${upload.message ?? ""} 수정 저장을 다시 눌러 주세요.`.trim());
+          return;
+        }
+      }
       setSavedBody(draft.trim());
+      photos.reset();
       setMode("view");
     } catch {
       setError(SAVE_ERROR);
@@ -86,6 +106,7 @@ export function EntryDetailBody({ entryId, body }: { entryId: string; body: stri
             </>
           }
         />
+        <EntryPhotoField photos={photos} disabled={saving} />
         <div className="flex gap-2">
           <button
             type="submit"
@@ -116,6 +137,9 @@ export function EntryDetailBody({ entryId, body }: { entryId: string; body: stri
       <p className="mt-6 whitespace-pre-wrap font-serif text-[1.0625rem] leading-[2]">
         {shownBody}
       </p>
+      <div className="mt-6">
+        <PhotoStrip photos={photos.visibleExisting} />
+      </div>
       <div className="mt-8 flex flex-col gap-3">
         {mode === "confirm-delete" ? (
           <div

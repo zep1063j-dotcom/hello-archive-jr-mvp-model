@@ -31,6 +31,8 @@ export async function GET(request: Request) {
       db: createAdminClient(),
       sender: sendWithResend,
       appUrl,
+      // isAuthorized를 통과했으므로 CRON_SECRET은 있다. 수신 거부 링크 서명 키로도 쓴다 (D-024).
+      unsubscribeSecret: process.env.CRON_SECRET ?? "",
     });
     return Response.json(summary);
   } catch (error) {

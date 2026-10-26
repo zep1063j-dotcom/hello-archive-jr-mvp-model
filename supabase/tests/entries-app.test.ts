@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { toLikePattern } from "../../src/lib/entry-search.ts";
 import type { Database } from "../../src/types/database";
 
 type Db = SupabaseClient<Database>;
@@ -188,5 +189,83 @@ describe("기록 앱 쿼리 (두 부모 계정)", () => {
 
     const rewritten = await insertEntry(userA, questionIds[0], "다시 쓴 기록");
     assert.ifError(rewritten.error);
+  });
+});
+
+// 기록 검색(getMyEntries의 search)과 지난 질문 쿼리(getMissedQuestions)가 쓰는 쿼리 모양 (D-024)
+describe("기록 검색·지난 질문 쿼리 (두 부모 계정)", () => {
+  let userA: TestUser;
+  let userB: TestUser;
+  const pastWeeks = ["2020-03-02", "2020-03-09", "2020-03-16"]; // 시드와 겹치지 않는 월요일
+  const pastIds: string[] = [];
+
+  const search = (user: TestUser, term: string) =>
+    user.client
+      .from("entries")
+      .select("id, body")
+      .eq("user_id", user.id)
+      .eq("child_id", user.childId)
+      .ilike("body", toLikePattern(term))
+      .order("created_at", { ascending: false });
+
+  before(async () => {
+    for (const week of pastWeeks) {
+      const q = await service
+        .from("weekly_questions")
+        .insert({ week_start: week, body: `[entries-test] ${week}` })
+        .select("id")
+        .single();
+      assert.ifError(q.error);
+      pastIds.push(q.data!.id);
+    }
+    userA = await createTestUser("search-a");
+    userB = await createTestUser("search-b");
+  });
+
+  after(async () => {
+    if (userA) await service.auth.admin.deleteUser(userA.id);
+    if (userB) await service.auth.admin.deleteUser(userB.id);
+    await service.from("weekly_questions").delete().in("id", pastIds);
+  });
+
+  it("지난 질문(시드에 없는 과거 주)에도 기록을 만들 수 있고 주 단위로 한 번만 쓸 수 있다", async () => {
+    const first = await insertEntry(userA, pastIds[0], "공룡 이야기를 100% 좋아해요");
+    assert.ifError(first.error);
+    const second = await insertEntry(userA, pastIds[1], "블록 쌓기");
+    assert.ifError(second.error);
+    const again = await insertEntry(userA, pastIds[0], "중복");
+    assert.equal(again.error?.code, "23505"); // 액션은 이를 수정으로 처리한다
+  });
+
+  it("놓친 질문 목록 쿼리: 범위(gte/lt) 안에서 답한 질문을 뺀다", async () => {
+    // getMissedQuestions: week_start >= 등록 주, < 이번 주
+    const { data, error } = await userA.client
+      .from("weekly_questions")
+      .select("id, week_start")
+      .gte("week_start", "2020-03-02")
+      .lt("week_start", "2020-03-23")
+      .order("week_start", { ascending: false });
+    assert.ifError(error);
+    assert.deepEqual(data!.map((q) => q.week_start), ["2020-03-16", "2020-03-09", "2020-03-02"]);
+
+    const answered = new Set((await readMyEntries(userA)).data!.map((e) => e.weekly_questions.id));
+    const missed = data!.filter((q) => !answered.has(q.id));
+    assert.deepEqual(missed.map((q) => q.week_start), ["2020-03-16"]);
+  });
+
+  it("검색은 본문 부분 일치(대소문자 무시)이고 %·_는 글자 그대로 찾는다", async () => {
+    assert.equal((await search(userA, "공룡")).data?.length, 1);
+    assert.equal((await search(userA, "블록")).data?.length, 1);
+    assert.equal((await search(userA, "100%")).data?.length, 1);
+    assert.equal((await search(userA, "없는말")).data?.length, 0);
+    // 와일드카드 주입: "%"만, "_" 하나만으로는 전부 매칭되지 않는다
+    assert.equal((await search(userA, "%")).data?.length, 1); // 본문에 실제 % 가 있는 기록만
+    assert.equal((await search(userA, "_")).data?.length, 0);
+  });
+
+  it("검색은 남의 기록을 찾지 못한다", async () => {
+    const result = await search(userB, "공룡");
+    assert.ifError(result.error);
+    assert.deepEqual(result.data, []);
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PhotoStrip } from "@/components/entry-photo-field";
 import { toKstDateKey } from "@/lib/date";
 import { groupByMonth } from "@/lib/entries";
 import type { Entry } from "@/types/archive";
@@ -65,6 +66,11 @@ export function EntryTimeline({
                       ⌄
                     </span>
                   </button>
+                  {isOpen && entry.photos.length > 0 && (
+                    <div className="px-2 pb-3 md:pl-[4.5rem]">
+                      <PhotoStrip photos={entry.photos} />
+                    </div>
+                  )}
                   {isOpen && (
                     <div className="flex justify-end px-2 pb-4">
                       <Link
