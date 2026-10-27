@@ -134,8 +134,8 @@ export function WeekComposer({
 
   const draftPreview = body.trim();
   const hasEntry = shownBody !== null;
-  // 이번 주 질문만 바꿀 수 있고, 기록을 남기면 그 주 질문은 고정된다 (D-025). 서버·DB도 같은 규칙으로 막는다.
-  const canChangeQuestion = !past && !hasEntry && status !== "saving";
+  // 이번 주 질문만 바꿀 수 있다. 기록을 남긴 뒤에도 바꿀 수 있고 이미 쓴 답은 바뀐 질문 아래에 보인다 (D-034).
+  const canChangeQuestion = !past && status !== "saving";
 
   return (
     <section aria-labelledby="this-week" className="border border-blush-deep bg-blush text-ink">
@@ -192,14 +192,15 @@ export function WeekComposer({
           <p className="mt-3 text-sm leading-relaxed text-ink-soft">{questionHint}</p>
         )}
         {canChangeQuestion && (
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-ink-soft">
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-ink-soft">
             <button
               type="button"
               onClick={() => setCustomOpen((value) => !value)}
               disabled={choiceBusy}
               aria-expanded={customOpen}
-              className="min-h-10 underline underline-offset-4 hover:text-brand disabled:opacity-60"
+              className="flex min-h-10 items-center gap-1.5 border border-ink/40 bg-sheet px-3 font-semibold text-ink hover:border-ink disabled:opacity-60"
             >
+              <span aria-hidden>✎</span>
               직접 질문 쓰기
             </button>
             {questionSource !== null && (

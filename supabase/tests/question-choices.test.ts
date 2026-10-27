@@ -1,6 +1,6 @@
 // 질문 은행·이번 주 질문 바꾸기 검증 (D-025). 실행: npm run test:choices
 // src/app/actions/question-choices.ts 가 쓰는 쿼리 모양을 서로 다른 두 부모 계정으로 실행한다.
-// 필요: 마이그레이션 20261026000000 과 supabase/seed/question_bank.sql 이 적용된 개발용 프로젝트.
+// 필요: 마이그레이션 20261026000000·20261027000000 과 supabase/seed/question_bank.sql 이 적용된 개발용 프로젝트.
 // 임시 사용자·임시 질문(2020년 월요일)을 만들고 끝나면 지운다 (service role 키 사용).
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
@@ -138,30 +138,44 @@ describe("질문 은행·이번 주 질문 바꾸기 (두 부모 계정)", () =>
     assert.ok(customWithRef.error, "custom 은 bank_question_id 불가");
   });
 
-  it("기록을 남기면 그 주 질문은 고정되고(수정·삭제 0행), 기록을 지우면 다시 바꿀 수 있다", async () => {
+  it("기록을 남긴 뒤에도 그 주 질문을 바꾸고 되돌릴 수 있다 (D-034). 남의 선택은 여전히 못 건드린다", async () => {
     const entry = await A.client
       .from("entries")
       .insert({ user_id: A.id, child_id: A.childId, weekly_question_id: weekIds[1], body: "기록" })
       .select("id");
     assert.ifError(entry.error);
 
-    const update = await A.client.from("week_question_choices").update({ body: "고정 후 변경" }).eq("user_id", A.id).eq("weekly_question_id", weekIds[1]).select("id");
+    const update = await A.client.from("week_question_choices").update({ body: "기록 뒤 변경" }).eq("user_id", A.id).eq("weekly_question_id", weekIds[1]).select("id, body");
     assert.ifError(update.error);
-    assert.equal(update.data?.length, 0, "기록 있는 주는 수정 0행");
+    assert.equal(update.data?.length, 1, "기록 있는 주도 수정 1행");
+    assert.equal(update.data?.[0].body, "기록 뒤 변경");
+
+    // 선택이 없던 주에도 기록 뒤에 새로 만들 수 있다
     const del = await A.client.from("week_question_choices").delete().eq("user_id", A.id).eq("weekly_question_id", weekIds[1]).select("id");
     assert.ifError(del.error);
-    assert.equal(del.data?.length, 0, "기록 있는 주는 삭제 0행");
+    assert.equal(del.data?.length, 1, "기록 있는 주도 삭제(기본 질문으로 되돌리기) 1행");
+    const insert = await A.client
+      .from("week_question_choices")
+      .insert({ user_id: A.id, weekly_question_id: weekIds[1], source: "custom", body: "기록 뒤 새 질문" })
+      .select("id");
+    assert.ifError(insert.error);
+    assert.equal(insert.data?.length, 1);
 
-    // 기록이 없는 주(0)는 계속 바꿀 수 있다
-    const free = await A.client.from("week_question_choices").update({ body: "자유롭게 변경" }).eq("user_id", A.id).eq("weekly_question_id", weekIds[0]).select("id");
-    assert.ifError(free.error);
-    assert.equal(free.data?.length, 1);
+    // 기록은 그대로 그 주 질문에 매달려 있다
+    const kept = await A.client.from("entries").select("weekly_question_id").eq("id", entry.data![0].id).single();
+    assert.ifError(kept.error);
+    assert.equal(kept.data?.weekly_question_id, weekIds[1]);
+
+    // 소유 조건은 유지: B는 A의 선택을 고치거나 지우지 못한다
+    const byB = await B.client.from("week_question_choices").update({ body: "남이 고침" }).eq("user_id", A.id).eq("weekly_question_id", weekIds[1]).select("id");
+    assert.ifError(byB.error);
+    assert.equal(byB.data?.length, 0);
+    const delByB = await B.client.from("week_question_choices").delete().eq("user_id", A.id).eq("weekly_question_id", weekIds[1]).select("id");
+    assert.ifError(delByB.error);
+    assert.equal(delByB.data?.length, 0);
 
     const removed = await A.client.from("entries").delete().eq("id", entry.data![0].id).select("id");
     assert.ifError(removed.error);
-    const after = await A.client.from("week_question_choices").update({ body: "기록 지운 뒤 변경" }).eq("user_id", A.id).eq("weekly_question_id", weekIds[1]).select("id");
-    assert.ifError(after.error);
-    assert.equal(after.data?.length, 1);
   });
 
   it("주·소유자는 수정할 수 없다 (컬럼 GRANT)", async () => {

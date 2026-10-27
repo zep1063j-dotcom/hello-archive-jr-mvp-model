@@ -10,15 +10,14 @@ import { todayKst, weekStartOf } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
 
 // 이번 주 질문 바꾸기: 은행에서 무작위로 바꾸기 / 직접 쓴 질문으로 바꾸기 / 기본 질문으로 되돌리기 (D-025).
-// 대상은 폼이 보낸 값이 아니라 서버가 정한 "오늘(KST)이 속한 주의 질문"이다. 그 주에 이미 기록이 있으면 바꿀 수 없다
-// (서버 확인 + DB RLS가 수정·삭제를 0행으로 막는다). 한 주에 기록은 하나이고, 기록을 남기면 그 주 질문은 고정된다.
+// 대상은 폼이 보낸 값이 아니라 서버가 정한 "오늘(KST)이 속한 주의 질문"이다. 기록을 남긴 뒤에도 바꿀 수 있다(D-034):
+// 이미 쓴 답은 바뀐 질문 아래에 보인다. 소유권은 RLS(본인 선택만)와 `user_id` 조건 양쪽으로 확인한다.
 
 export type ChoiceActionResult =
   | { ok: true; question: { body: string; source: "bank" | "custom" | null } }
   | { ok: false; error: string };
 
 const FAILED = "질문을 바꾸지 못했어요. 잠시 후 다시 눌러 주세요.";
-const LOCKED = "이미 이번 주 기록을 남겨서 질문을 바꿀 수 없어요. 기록을 지우면 다시 바꿀 수 있어요.";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 type WeekContext = {
@@ -27,7 +26,7 @@ type WeekContext = {
   week: { id: string; body: string };
 };
 
-/** 이번 주 기본 질문과 잠금 여부를 확인한다. 바꿀 수 없으면 사용자에게 보여줄 문구를 돌려준다. */
+/** 이번 주 기본 질문을 읽는다. 바꿀 수 없으면 사용자에게 보여줄 문구를 돌려준다. */
 async function loadEditableWeek(): Promise<{ ok: true; ctx: WeekContext } | { ok: false; error: string }> {
   const user = await requireUser();
   const supabase = await createClient();
@@ -42,18 +41,6 @@ async function loadEditableWeek(): Promise<{ ok: true; ctx: WeekContext } | { ok
     return { ok: false, error: FAILED };
   }
   if (!week) return { ok: false, error: "이번 주 질문이 아직 준비되지 않았어요." };
-
-  const { data: existing, error: entryError } = await supabase
-    .from("entries")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("weekly_question_id", week.id)
-    .limit(1);
-  if (entryError) {
-    console.error("[choices] 기록 확인 실패", entryError.code);
-    return { ok: false, error: FAILED };
-  }
-  if (existing.length > 0) return { ok: false, error: LOCKED };
 
   return { ok: true, ctx: { userId: user.id, supabase, week } };
 }

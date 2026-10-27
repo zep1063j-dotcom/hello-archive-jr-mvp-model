@@ -103,6 +103,7 @@ Vercel 예정. 아래는 순서이며 각 항목은 실행 후 결과를 SESSION
 2. `supabase/seed/question_bank.sql` (예시 질문 100개) 와 `supabase/seed/weekly_questions.sql` (52주로 확장, 여러 번 실행해도 안전)
 3. `supabase/migrations/20261026000100_yearly_answers.sql` (매년 같은 질문, D-026)
 4. `supabase/migrations/20261026000200_photos.sql` (사진: `children.photo_path`, `entry_photos`, 비공개 버킷 `photos`와 Storage 정책, D-027). `storage.objects` 정책 생성에서 소유자 권한 오류가 나면 대시보드 Storage → Policies에서 같은 조건(버킷 `photos`, 첫 폴더 = `auth.uid()`)으로 select/insert/delete 정책을 만든다.
+5. `supabase/apply/3_question_change_after_entry.sql` (= 마이그레이션 `20261027000000`: 기록을 쓴 뒤에도 질문 바꾸기 허용, D-034). 정책을 지웠다 다시 만들어 여러 번 실행해도 안전하다. **이 파일을 정식 DB에 적용한 뒤에 앱을 배포(push)한다.**
 적용 뒤 개발 DB에서 `npm run test:choices`, `npm run test:yearly`, `npm run test:photos`를 실행한다(새 마이그레이션이 없으면 실패한다). 정식 DB에는 테스트를 돌리지 않는다.
 
 ## 베타 지표 조회 (SESSION 09, D-023)
