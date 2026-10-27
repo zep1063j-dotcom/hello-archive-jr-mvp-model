@@ -66,6 +66,14 @@ export default function ProfilePage(props: PageProps<"/profile">) {
         <p className="px-1 text-xs leading-relaxed text-ink-mute">
           메일로 보내 주시면 확인 후 처리해 드려요. 문의 {CONTACT_EMAIL}
         </p>
+        <nav aria-label="약관" className="flex flex-wrap gap-x-5 px-1 text-sm text-ink-soft">
+          <Link href="/terms" className="flex min-h-12 items-center underline underline-offset-4 hover:text-brand">
+            이용약관
+          </Link>
+          <Link href="/privacy" className="flex min-h-12 items-center underline underline-offset-4 hover:text-brand">
+            개인정보 처리방침
+          </Link>
+        </nav>
       </section>
     </>
   );

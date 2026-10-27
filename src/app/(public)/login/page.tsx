@@ -1,6 +1,8 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { LoginForm } from "@/components/login-form";
+import { SiteFooter } from "@/components/site-footer";
 import { Eyebrow, PageSkeleton } from "@/components/states";
 import { safeNextPath } from "@/lib/auth";
 
@@ -25,7 +27,19 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
         <Suspense fallback={<PageSkeleton rows={1} />}>
           <LoginFormLoader searchParams={searchParams} />
         </Suspense>
+        <p className="text-xs leading-relaxed text-ink-mute">
+          시작하면{" "}
+          <Link href="/terms" className="underline underline-offset-4 hover:text-brand">
+            이용약관
+          </Link>
+          과{" "}
+          <Link href="/privacy" className="underline underline-offset-4 hover:text-brand">
+            개인정보 처리방침
+          </Link>
+          에 동의한 것으로 봐요.
+        </p>
       </main>
+      <SiteFooter />
     </>
   );
 }

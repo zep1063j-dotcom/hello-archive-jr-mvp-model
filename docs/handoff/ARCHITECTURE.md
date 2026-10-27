@@ -52,6 +52,7 @@ docs/handoff/     # 인수인계 문서
 | `/profile` | app | 자녀 조회·수정(`?edit=1`), 주간 이메일 수신 켜기/끄기, 로그아웃 구현됨 / 데이터 삭제 요청은 미구현 | 04, 07 |
 | `/write?week=YYYY-MM-DD` | app | 놓친 지난 질문에 기록(D-024). 쓸 수 없는 주는 안내 화면 | 09 |
 | `/archive/card/[monthKey]` | app | 1개월 이야기 카드(키 `2026-10`): 앞면 최근 기록 5개의 질문·답, 뒷면 사진/글귀, 브라우저 캔버스로 그려 PNG 저장·공유. 서버는 기록·사진 URL만 준다 (D-029) | 09 |
+| `/terms`, `/privacy` | public | 이용약관·개인정보 처리방침(초안, 법률 검토 필요). 소개·로그인 푸터와 프로필 아래에서 링크 (D-035) | 09 |
 | `/yearly` | app | 매년 같은 질문 5개: 지금 연도 답 쓰기·수정, 지난 연도 읽기 전용으로 나란히 (D-026) | 09 |
 | `/unsubscribe?u=&t=` | public | 메일의 수신 거부 링크 → 확인 화면 → 버튼으로 끔. 서명(HMAC) 검증, 로그인 불필요 (D-024) | 09 |
 | `/api/cron/weekly-email` | route handler | 예약 실행 진입점(`vercel.json`: 월·화 10:00 UTC = 19:00 KST). `CRON_SECRET` Bearer 검증, 집계 JSON만 응답. 구현됨, 실제 발송·Cron 동작은 미검증 (D-022) | 07 |

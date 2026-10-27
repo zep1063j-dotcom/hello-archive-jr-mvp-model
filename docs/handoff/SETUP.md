@@ -97,6 +97,9 @@ Vercel 예정. 아래는 순서이며 각 항목은 실행 후 결과를 SESSION
 ### 배포 실제 값 메모 (비밀 아님)
 - 앱 주소 `https://archivejr.helloblank.net`, 발신 `Hello Archive jr <hello@helloblank.net>`. 공개 변수(`NEXT_PUBLIC_*`)와 `EMAIL_FROM`은 Vercel에서 Sensitive를 끈다. `NEXT_PUBLIC_*`은 빌드에 박히므로 바꾸면 Build Cache 없이 Redeploy. Supabase URL은 `https://<ref>.supabase.co`만(경로·끝 `/` 금지). 로컬 `.env.local`은 개발용 Supabase·`http://localhost:3000`을 유지한다.
 
+## 공개 화면 방문 측정 GA4 (D-035)
+환경 변수 `NEXT_PUBLIC_GA_MEASUREMENT_ID`(앱용으로 따로 만든 GA4 측정 ID, `G-`로 시작, 공개 값. 랜딩페이지와 다른 값)를 Vercel에 넣고 Build Cache 없이 Redeploy한다. 로컬 `.env.local`은 비워 두면 측정하지 않는다. 측정하는 화면은 `/`, `/login`, `/terms`, `/privacy`뿐이다.
+
 ## 마이그레이션 적용 순서 (SESSION 09 추가분) — 앱 배포보다 먼저
 개발용·정식 Supabase 모두 SQL Editor에서 **이 순서**로 실행한다(이미 적용한 파일은 다시 실행하지 않는다). 사용자가 직접 실행한다.
 1. `supabase/migrations/20261026000000_question_bank_and_choices.sql` (질문 은행·부모별 질문 선택, D-025)

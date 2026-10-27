@@ -1,4 +1,5 @@
 import { Logo } from "@/components/logo";
+import { SiteFooter } from "@/components/site-footer";
 import { Eyebrow, PrimaryLink } from "@/components/states";
 
 // 소개 + 시작하기. 이미 로그인했다면 /login에서 proxy가 /home으로 보낸다.
@@ -47,6 +48,7 @@ export default function Landing() {
           </p>
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }
