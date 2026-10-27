@@ -57,15 +57,3 @@ export function applyChoice(
   if (!choice) return question;
   return { id: question.id, weekStart: question.weekStart, body: choice.body, source: choice.source };
 }
-
-// 질문 옆 장식 이모티콘. 질문마다 정해진 값이라 서버·브라우저 렌더링이 같고, 질문이 바뀌면 이모티콘도 바뀐다.
-const QUESTION_EMOJIS = [
-  "🌱", "🧸", "🎈", "🌈", "🍓", "🚀", "🐣", "🎨", "🌻", "🍪", "⭐", "🐻",
-  "🦋", "🎵", "🍀", "🌙", "☀️", "🐥", "🍎", "🎁", "🧩", "🚲", "🐢", "🌸",
-];
-
-export function emojiForQuestion(key: string): string {
-  let hash = 0;
-  for (const char of key) hash = (hash * 31 + (char.codePointAt(0) ?? 0)) >>> 0;
-  return QUESTION_EMOJIS[hash % QUESTION_EMOJIS.length];
-}

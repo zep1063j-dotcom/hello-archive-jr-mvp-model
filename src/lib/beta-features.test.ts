@@ -141,7 +141,6 @@ describe("주간 메일 본문의 수신 거부", () => {
 import {
   applyChoice,
   CUSTOM_QUESTION_MAX_LENGTH,
-  emojiForQuestion,
   pickRandomBankQuestion,
   validateCustomQuestion,
 } from "./question-choice-rules.ts";
@@ -214,12 +213,6 @@ describe("질문 바꾸기 표시", () => {
     assert.equal(applyChoice(base, undefined), base);
     const changed = applyChoice(base, { source: "custom", body: "내 질문" });
     assert.deepEqual(changed, { id: "q", weekStart: "2026-10-26", body: "내 질문", source: "custom" });
-  });
-  it("질문마다 같은 이모티콘이 나오고 값이 비어 있지 않다", () => {
-    assert.equal(emojiForQuestion("a"), emojiForQuestion("a"));
-    const seen = new Set(["가", "나", "다", "라", "마", "바", "사", "아"].map(emojiForQuestion));
-    assert.ok(seen.size > 1);
-    for (const emoji of seen) assert.ok(emoji.length > 0);
   });
 });
 

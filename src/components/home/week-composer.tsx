@@ -11,7 +11,7 @@ import {
 import { canSubmitBody, EntryBodyField } from "@/components/entry-body-field";
 import { EntryPhotoField, PhotoStrip, useEntryPhotos } from "@/components/entry-photo-field";
 import { formatKoreanDate, formatWeekLabel } from "@/lib/date";
-import { CUSTOM_QUESTION_MAX_LENGTH, emojiForQuestion } from "@/lib/question-choice-rules";
+import { CUSTOM_QUESTION_MAX_LENGTH } from "@/lib/question-choice-rules";
 import type { Entry, WeeklyQuestion } from "@/types/archive";
 
 type SaveStatus = "idle" | "saving" | "error";
@@ -169,11 +169,22 @@ export function WeekComposer({
               onClick={() => runChoice(shuffleThisWeekQuestion)}
               disabled={choiceBusy}
               aria-label="이번 주 질문을 다른 질문으로 바꾸기"
-              className="grid size-11 shrink-0 place-items-center rounded-full border border-blush-deep bg-sheet text-xl transition-transform hover:rotate-12 active:scale-90 disabled:opacity-60"
+              className="grid size-11 shrink-0 place-items-center rounded-full border border-blush-deep bg-sheet text-ink-soft transition-transform hover:text-brand active:scale-90 disabled:opacity-60"
             >
-              <span aria-hidden className={choiceBusy ? "animate-spin" : undefined}>
-                {emojiForQuestion(`${question.id}${questionBody}`)}
-              </span>
+              {/* 새로고침(↻) 아이콘. 바꾸는 동안 돈다. */}
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`size-5 ${choiceBusy ? "animate-spin" : ""}`}
+              >
+                <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                <path d="M21 3v6h-6" />
+              </svg>
             </button>
           )}
         </div>
