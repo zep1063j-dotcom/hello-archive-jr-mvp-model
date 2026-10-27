@@ -1,8 +1,8 @@
 // 1개월 이야기 카드의 순수 규칙 (D-029). Next.js·브라우저에 묶이지 않는 순수 TS (D-015).
-//  - 앞면: 그 달 기록 중 최근 5개의 질문과 답을 오래된 순으로. 뒷면: 그 달에 올린 사진이 있으면 가장 최근 사진, 없으면 글귀.
+//  - 앞면(타임라인): 그 달 기록 중 최근 5개의 날짜·질문·답을 오래된 순으로. 뒷면(폴라로이드): 그 달에 올린 사진이 있으면 가장 최근 사진과 글귀, 없으면 글귀 카드.
 //  - 글귀는 지금은 정해 둔 목록에서 고른다. AI가 쓰는 글귀는 정식 출시 때 이 자리에 들어온다(D-029).
 //  - 카드는 부모의 기기에서 그려지고 서버로 올라가지 않는다. 이 파일은 "무엇을 어디에 놓는가"만 정한다.
-import { addDays, formatAge } from "./date.ts";
+import { addDays, formatAge, formatMonthDay, toKstDateKey } from "./date.ts";
 import type { Chapter } from "./chapters.ts";
 
 /** 카드 이미지 크기 (4:5 세로형, 인스타그램 등 공유에 흔한 비율) */
@@ -11,13 +11,26 @@ export const CARD_HEIGHT = 1350;
 
 export const MAX_CARD_ITEMS = 5;
 
-export type MonthCardItem = { question: string; answer: string };
+/** `dateLabel`은 기록을 쓴 날(KST)의 "10/27" 형태 */
+export type MonthCardItem = { dateLabel: string; question: string; answer: string };
 
 export type MonthCardBack =
   | { kind: "photo"; url: string }
   | { kind: "quote"; text: string };
 
+export type Season = "spring" | "summer" | "autumn" | "winter";
+
+/** 카드 색을 정하는 계절: 3~5월 봄, 6~8월 여름, 9~11월 가을, 12~2월 겨울 (D-033) */
+export function seasonOfMonth(month: number): Season {
+  if (month >= 3 && month <= 5) return "spring";
+  if (month >= 6 && month <= 8) return "summer";
+  if (month >= 9 && month <= 11) return "autumn";
+  return "winter";
+}
+
 export type MonthCardModel = {
+  /** 1~12 */
+  month: number;
   /** "2026" */
   yearLabel: string;
   /** "10월" */
@@ -90,7 +103,11 @@ export function buildMonthCard(input: {
 
   const items = chapter.entries
     .slice(-MAX_CARD_ITEMS)
-    .map((entry) => ({ question: entry.question.body, answer: entry.body }));
+    .map((entry) => ({
+      dateLabel: formatMonthDay(toKstDateKey(entry.createdAt)),
+      question: entry.question.body,
+      answer: entry.body,
+    }));
 
   // chapter.entries는 오래된 순이라 뒤에서부터 사진이 있는 기록을 찾는다.
   const withPhoto = [...chapter.entries].reverse().find((entry) => entry.photos.length > 0);
@@ -101,6 +118,7 @@ export function buildMonthCard(input: {
 
   const ageAt = chapter.isOpen ? today : addDays(chapter.end, -1);
   return {
+    month: Number(chapter.start.slice(5, 7)),
     yearLabel: chapter.start.slice(0, 4),
     monthLabel: `${Number(chapter.start.slice(5, 7))}월`,
     childName,
@@ -168,15 +186,20 @@ export function wrapText(
   return kept;
 }
 
-/** 앞면 배치 상수 (px, 1080×1350 기준). 그리는 코드와 배치 계산이 같은 값을 쓴다. */
-export const FRONT = {
+/** 앞면(타임라인) 배치 상수 (px, 1080×1350 기준). 그리는 코드와 배치 계산이 같은 값을 쓴다. */
+export const TIMELINE = {
   margin: 88,
-  bodyTop: 366,
+  bodyTop: 380,
   bodyBottom: 1222,
-  questionSize: 30,
-  questionLineHeight: 40,
-  answerSize: 34,
-  answerLineHeight: 50,
+  /** 날짜 글자 오른쪽 끝, 점 왼쪽 끝 */
+  dotLeft: 166,
+  dotSize: 34,
+  /** 질문·답 글자가 시작하는 x */
+  textLeft: 232,
+  questionSize: 28,
+  questionLineHeight: 38,
+  answerSize: 32,
+  answerLineHeight: 46,
   /** 질문과 답 사이 */
   questionGap: 8,
   gapMin: 24,
@@ -185,45 +208,45 @@ export const FRONT = {
   maxAnswerLines: 4,
 } as const;
 
-export const FRONT_CONTENT_WIDTH = CARD_WIDTH - FRONT.margin * 2;
+export const TIMELINE_TEXT_WIDTH = CARD_WIDTH - TIMELINE.margin - TIMELINE.textLeft;
 
-export type FrontBlock = {
+export type TimelineBlock = {
   question: string[];
   answer: string[];
-  /** 블록 맨 위 y */
+  /** 블록 맨 위 y (질문 첫 줄의 위) */
   top: number;
 };
 
 /**
- * 앞면 질문·답 블록의 줄과 위치를 정한다. 답을 최대 4줄에서 시작해, 전부 들어갈 때까지 줄 수를 줄인다
- * (항목이 5개면 답은 보통 2줄까지, 적으면 더 길게). 남는 공간은 블록 사이 간격으로 나눈다.
+ * 타임라인 항목의 줄과 위치를 정한다. 답을 최대 4줄에서 시작해, 전부 들어갈 때까지 줄 수를 줄인다
+ * (항목이 5개면 답은 보통 2줄까지, 적으면 더 길게). 남는 공간은 항목 사이 간격으로 나눈다.
  */
-export function layoutFront(
+export function layoutTimeline(
   measureQuestion: MeasureText,
   measureAnswer: MeasureText,
   items: MonthCardItem[],
-): FrontBlock[] {
+): TimelineBlock[] {
   if (items.length === 0) return [];
-  const area = FRONT.bodyBottom - FRONT.bodyTop;
+  const area = TIMELINE.bodyBottom - TIMELINE.bodyTop;
 
-  for (let answerLines = FRONT.maxAnswerLines; answerLines >= 1; answerLines -= 1) {
+  for (let answerLines = TIMELINE.maxAnswerLines; answerLines >= 1; answerLines -= 1) {
     const blocks = items.map((item) => ({
-      question: wrapText(measureQuestion, item.question, FRONT_CONTENT_WIDTH, FRONT.maxQuestionLines),
-      answer: wrapText(measureAnswer, item.answer, FRONT_CONTENT_WIDTH, answerLines),
+      question: wrapText(measureQuestion, item.question, TIMELINE_TEXT_WIDTH, TIMELINE.maxQuestionLines),
+      answer: wrapText(measureAnswer, item.answer, TIMELINE_TEXT_WIDTH, answerLines),
     }));
     const heights = blocks.map(
       (block) =>
-        block.question.length * FRONT.questionLineHeight +
-        FRONT.questionGap +
-        block.answer.length * FRONT.answerLineHeight,
+        block.question.length * TIMELINE.questionLineHeight +
+        TIMELINE.questionGap +
+        block.answer.length * TIMELINE.answerLineHeight,
     );
     const total = heights.reduce((sum, height) => sum + height, 0);
     const gaps = items.length - 1;
-    if (total + gaps * FRONT.gapMin > area && answerLines > 1) continue;
+    if (total + gaps * TIMELINE.gapMin > area && answerLines > 1) continue;
 
     const gap =
-      gaps === 0 ? 0 : Math.min(FRONT.gapMax, Math.max(FRONT.gapMin, (area - total) / gaps));
-    let top: number = FRONT.bodyTop;
+      gaps === 0 ? 0 : Math.min(TIMELINE.gapMax, Math.max(TIMELINE.gapMin, (area - total) / gaps));
+    let top: number = TIMELINE.bodyTop;
     return blocks.map((block, index) => {
       const placed = { ...block, top };
       top += heights[index] + gap;

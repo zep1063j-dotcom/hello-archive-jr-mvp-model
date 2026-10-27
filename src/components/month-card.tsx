@@ -4,24 +4,81 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   CARD_HEIGHT,
   CARD_WIDTH,
-  FRONT,
-  FRONT_CONTENT_WIDTH,
-  layoutFront,
+  layoutTimeline,
+  seasonOfMonth,
+  TIMELINE,
   wrapText,
   type MonthCardModel,
+  type Season,
 } from "@/lib/month-card";
 
 // 1개월 이야기 카드 (D-029). 캔버스에 그려서 화면에 보여 주고, 같은 캔버스를 PNG로 저장·공유한다
 // (보이는 것과 저장되는 것이 같다). 카드는 부모의 기기 안에서만 만들어지고 서버로 올라가지 않는다.
+// 앞면은 타임라인, 뒷면은 폴라로이드 (D-033). 바깥 모서리도 둥글게 자른다(모서리 바깥은 투명).
 
-const PAPER = "#f7f3eb";
-const BLUSH = "#f6e5da";
-const INK = "#111111";
-const INK_SOFT = "#57534e";
-const INK_MUTE = "#7d766b";
-const BRAND = "#d92f3e";
-const LINE = "#d6cdbb";
-const MARGIN = FRONT.margin;
+// 카드 색은 달의 계절을 따른다(3~5월 연한 버터, 6~8월 연한 하늘, 9~11월 연한 라벤더, 12~2월 짙은 갈색).
+// 색을 바꾸려면 아래 값만 고친다. `polaroidInk`는 뒷면 폴라로이드(밝은 종이) 위 글자색이다.
+type Theme = {
+  front: string;
+  back: string;
+  polaroid: string;
+  polaroidInk: string;
+  ink: string;
+  soft: string;
+  mute: string;
+  accent: string;
+  line: string;
+};
+
+const THEMES: Record<Season, Theme> = {
+  spring: {
+    front: "#fbf0cf",
+    back: "#f7e3b0",
+    polaroid: "#fffdf5",
+    polaroidInk: "#1a1a1a",
+    ink: "#1a1a1a",
+    soft: "#5c5440",
+    mute: "#8a8062",
+    accent: "#d92f3e",
+    line: "#e3d6a8",
+  },
+  summer: {
+    front: "#e6eef6",
+    back: "#d3e2f0",
+    polaroid: "#fbfdff",
+    polaroidInk: "#14202c",
+    ink: "#14202c",
+    soft: "#475a6b",
+    mute: "#76889a",
+    accent: "#d92f3e",
+    line: "#c3d3e2",
+  },
+  autumn: {
+    front: "#eeeaf6",
+    back: "#ddd5ee",
+    polaroid: "#fdfcff",
+    polaroidInk: "#1d1a2b",
+    ink: "#1d1a2b",
+    soft: "#554f6b",
+    mute: "#837d99",
+    accent: "#d92f3e",
+    line: "#cfc7e2",
+  },
+  winter: {
+    front: "#3b2a21",
+    back: "#4d382c",
+    polaroid: "#f7f0e4",
+    polaroidInk: "#2a1d16",
+    ink: "#f7efe3",
+    soft: "#d9c8b4",
+    mute: "#a89580",
+    accent: "#ff8a80",
+    line: "#5a443a",
+  },
+};
+const MARGIN = TIMELINE.margin;
+/** 카드 바깥 모서리 둥글기(px). 모서리 바깥은 투명하게 저장된다. */
+const CARD_RADIUS = 56;
 
 type Side = "front" | "back";
 type Status = "loading" | "ready" | "error";
@@ -54,20 +111,37 @@ function setup(canvas: HTMLCanvasElement, background: string): CanvasRenderingCo
   canvas.height = CARD_HEIGHT;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
+  // 바깥 모서리를 둥글게 자른다. 이후에 그리는 것은 모두 이 안쪽에만 보인다(저장하는 PNG의 모서리는 투명).
+  roundedRect(ctx, 0, 0, CARD_WIDTH, CARD_HEIGHT, CARD_RADIUS);
+  ctx.clip();
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
   ctx.textBaseline = "middle";
   return ctx;
 }
 
-function drawFooter(ctx: CanvasRenderingContext2D, family: string, right: string) {
-  ctx.fillStyle = LINE;
-  ctx.fillRect(MARGIN, 1262, CARD_WIDTH - MARGIN * 2, 2);
-  ctx.fillStyle = BRAND;
+/** 둥근 사각형 경로 (브라우저의 roundRect 지원에 기대지 않는다). */
+function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+const measureWith = (ctx: CanvasRenderingContext2D, font: string) => (text: string) => {
+  ctx.font = font;
+  return ctx.measureText(text).width;
+};
+
+function drawFooter(ctx: CanvasRenderingContext2D, t: Theme, family: string, right: string) {
+  ctx.fillStyle = t.accent;
   ctx.beginPath();
   ctx.arc(MARGIN + 6, 1304, 6, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = INK_MUTE;
+  ctx.fillStyle = t.mute;
   ctx.font = fontOf(600, 24, family);
   ctx.textAlign = "left";
   ctx.fillText("Hello Archive jr", MARGIN + 24, 1304);
@@ -76,129 +150,143 @@ function drawFooter(ctx: CanvasRenderingContext2D, family: string, right: string
   ctx.textAlign = "left";
 }
 
-function drawFront(canvas: HTMLCanvasElement, model: MonthCardModel, family: string) {
-  const ctx = setup(canvas, PAPER);
+/** 앞면: 큰 월 숫자 + 날짜가 붙은 세로 타임라인 */
+function drawFront(canvas: HTMLCanvasElement, model: MonthCardModel, family: string, t: Theme) {
+  const ctx = setup(canvas, t.front);
   if (!ctx) return;
-  const measure = (font: string) => (text: string) => {
-    ctx.font = font;
-    return ctx.measureText(text).width;
-  };
+
+  const monthNumber = model.monthLabel.replace("월", "");
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = t.ink;
+  ctx.font = fontOf(700, 260, family);
+  ctx.fillText(monthNumber, MARGIN, 292);
+  const numberWidth = ctx.measureText(monthNumber).width;
+  ctx.font = fontOf(700, 90, family);
+  ctx.fillText("월", MARGIN + numberWidth + 8, 292);
+  ctx.textBaseline = "middle";
 
   ctx.textAlign = "right";
-  ctx.fillStyle = INK_MUTE;
-  ctx.font = fontOf(600, 30, family);
+  ctx.fillStyle = t.mute;
+  ctx.font = fontOf(600, 34, family);
   ctx.fillText(model.yearLabel, CARD_WIDTH - MARGIN, 122);
+  const who = [model.childName, model.ageLabel].filter(Boolean).join(" · ");
+  const [whoLine] = wrapText(measureWith(ctx, fontOf(600, 34, family)), who, 470, 1);
+  ctx.fillStyle = t.soft;
+  ctx.font = fontOf(600, 34, family);
+  ctx.fillText(whoLine ?? "", CARD_WIDTH - MARGIN, 178);
   ctx.textAlign = "left";
 
-  ctx.fillStyle = INK;
-  ctx.font = fontOf(700, 150, family);
-  ctx.fillText(model.monthLabel, MARGIN, 196);
+  const questionFont = fontOf(600, TIMELINE.questionSize, family);
+  const answerFont = fontOf(400, TIMELINE.answerSize, family);
+  const blocks = layoutTimeline(measureWith(ctx, questionFont), measureWith(ctx, answerFont), model.items);
 
-  const who = [model.childName, model.ageLabel].filter(Boolean).join(" · ");
-  const [whoLine] = wrapText(measure(fontOf(600, 34, family)), who, FRONT_CONTENT_WIDTH, 1);
-  ctx.fillStyle = INK_SOFT;
-  ctx.font = fontOf(600, 34, family);
-  ctx.fillText(whoLine ?? "", MARGIN, 292);
+  const dotX = TIMELINE.dotLeft + TIMELINE.dotSize / 2;
+  const dotYs = blocks.map((block) => block.top + TIMELINE.questionLineHeight / 2);
+  if (dotYs.length > 1) {
+    ctx.fillStyle = t.line;
+    roundedRect(ctx, dotX - 2, dotYs[0], 4, dotYs[dotYs.length - 1] - dotYs[0], 2);
+    ctx.fill();
+  }
 
-  ctx.fillStyle = INK;
-  ctx.fillRect(MARGIN, 330, CARD_WIDTH - MARGIN * 2, 3);
-
-  const questionFont = fontOf(600, FRONT.questionSize, family);
-  const answerFont = fontOf(400, FRONT.answerSize, family);
-  const blocks = layoutFront(measure(questionFont), measure(answerFont), model.items);
   blocks.forEach((block, index) => {
+    const dotY = dotYs[index];
+    ctx.fillStyle = t.mute;
+    ctx.font = fontOf(600, 26, family);
+    ctx.fillText(model.items[index].dateLabel, MARGIN, dotY);
+
+    ctx.fillStyle = t.accent;
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, TIMELINE.dotSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+
     let y = block.top;
-    ctx.fillStyle = BRAND;
+    ctx.fillStyle = t.accent;
     ctx.font = questionFont;
     for (const line of block.question) {
-      ctx.fillText(line, MARGIN, y + FRONT.questionLineHeight / 2);
-      y += FRONT.questionLineHeight;
+      ctx.fillText(line, TIMELINE.textLeft, y + TIMELINE.questionLineHeight / 2);
+      y += TIMELINE.questionLineHeight;
     }
-    y += FRONT.questionGap;
-    ctx.fillStyle = INK;
+    y += TIMELINE.questionGap;
+    ctx.fillStyle = t.ink;
     ctx.font = answerFont;
     for (const line of block.answer) {
-      ctx.fillText(line, MARGIN, y + FRONT.answerLineHeight / 2);
-      y += FRONT.answerLineHeight;
-    }
-    const next = blocks[index + 1];
-    if (next) {
-      ctx.fillStyle = LINE;
-      ctx.fillRect(MARGIN, (y + next.top) / 2 - 1, CARD_WIDTH - MARGIN * 2, 2);
+      ctx.fillText(line, TIMELINE.textLeft, y + TIMELINE.answerLineHeight / 2);
+      y += TIMELINE.answerLineHeight;
     }
   });
 
-  drawFooter(ctx, family, `이달의 기록 ${model.entryCount}개`);
+  drawFooter(ctx, t, family, `이달의 기록 ${model.entryCount}개`);
 }
 
+/** 뒷면: 살짝 기울어진 폴라로이드. 사진이 있으면 사진 + 글귀, 없으면 큰 글귀 */
 function drawBack(
   canvas: HTMLCanvasElement,
   model: MonthCardModel,
   family: string,
   photo: HTMLImageElement | null,
+  t: Theme,
 ) {
-  const caption = `${model.yearLabel}년 ${model.monthLabel}`;
+  const ctx = setup(canvas, t.back);
+  if (!ctx) return;
 
+  const card = { x: 110, y: 110, w: CARD_WIDTH - 220, h: 1000 };
+  ctx.save();
+  ctx.translate(CARD_WIDTH / 2, card.y + card.h / 2);
+  ctx.rotate((-1.5 * Math.PI) / 180);
+  ctx.translate(-CARD_WIDTH / 2, -(card.y + card.h / 2));
+
+  ctx.fillStyle = t.polaroid;
+  roundedRect(ctx, card.x, card.y, card.w, card.h, 44);
+  ctx.fill();
+  ctx.strokeStyle = t.line;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  const centerX = CARD_WIDTH / 2;
+  ctx.textAlign = "center";
   if (photo) {
-    const ctx = setup(canvas, PAPER);
-    if (!ctx) return;
     // 사진은 틀을 꽉 채우도록 잘라 넣는다(얼굴이 보통 위쪽이라 위를 조금 더 남긴다).
-    const frame = { x: MARGIN, y: 88, w: CARD_WIDTH - MARGIN * 2, h: 1010 };
+    const frame = { x: card.x + 40, y: card.y + 40, w: card.w - 80, h: 760 };
     const scale = Math.max(frame.w / photo.width, frame.h / photo.height);
     const sw = frame.w / scale;
     const sh = frame.h / scale;
-    ctx.drawImage(
-      photo,
-      (photo.width - sw) / 2,
-      (photo.height - sh) * 0.35,
-      sw,
-      sh,
-      frame.x,
-      frame.y,
-      frame.w,
-      frame.h,
-    );
-    ctx.fillStyle = INK;
-    ctx.font = fontOf(700, 56, family);
-    ctx.fillText(caption, MARGIN, 1154);
-    ctx.fillStyle = INK_SOFT;
-    ctx.font = fontOf(600, 34, family);
-    const measure = (text: string) => ctx.measureText(text).width;
-    const [name] = wrapText(measure, `${model.childName}의 한 달`, FRONT_CONTENT_WIDTH, 1);
-    ctx.fillText(name ?? "", MARGIN, 1214);
-    drawFooter(ctx, family, "");
-    return;
+    ctx.save();
+    roundedRect(ctx, frame.x, frame.y, frame.w, frame.h, 28);
+    ctx.clip();
+    ctx.drawImage(photo, (photo.width - sw) / 2, (photo.height - sh) * 0.35, sw, sh, frame.x, frame.y, frame.w, frame.h);
+    ctx.restore();
+
+    const quoteFont = fontOf(600, 44, family);
+    const lines = wrapText(measureWith(ctx, quoteFont), model.quote, card.w - 100, 2);
+    ctx.fillStyle = t.polaroidInk;
+    ctx.font = quoteFont;
+    lines.forEach((line, index) => ctx.fillText(line, centerX, frame.y + frame.h + 80 + index * 66));
+  } else {
+    ctx.fillStyle = t.accent;
+    ctx.font = fontOf(700, 220, family);
+    ctx.fillText("“", centerX, card.y + 250);
+    const quoteFont = fontOf(600, 58, family);
+    const lines = wrapText(measureWith(ctx, quoteFont), model.quote, card.w - 140, 5);
+    const lineHeight = 96;
+    const startY = card.y + 560 - ((lines.length - 1) * lineHeight) / 2;
+    ctx.fillStyle = t.polaroidInk;
+    ctx.font = quoteFont;
+    lines.forEach((line, index) => ctx.fillText(line, centerX, startY + index * lineHeight));
   }
+  ctx.restore();
 
-  const ctx = setup(canvas, BLUSH);
-  if (!ctx) return;
-  ctx.fillStyle = BRAND;
-  ctx.font = fontOf(700, 220, family);
   ctx.textAlign = "center";
-  ctx.fillText("“", CARD_WIDTH / 2, 330);
-
-  const quoteFont = fontOf(600, 60, family);
-  ctx.font = quoteFont;
-  const lines = wrapText((text) => ctx.measureText(text).width, model.quote, 800, 6);
-  const lineHeight = 100;
-  const startY = 700 - ((lines.length - 1) * lineHeight) / 2;
-  ctx.fillStyle = INK;
-  ctx.font = quoteFont;
-  lines.forEach((line, index) => ctx.fillText(line, CARD_WIDTH / 2, startY + index * lineHeight));
-
-  ctx.fillStyle = INK;
-  ctx.fillRect(CARD_WIDTH / 2 - 40, 1030, 80, 3);
-  ctx.fillStyle = INK_SOFT;
+  ctx.fillStyle = t.soft;
   ctx.font = fontOf(600, 34, family);
   const [label] = wrapText(
-    (text) => ctx.measureText(text).width,
-    `${caption} · ${model.childName}`,
-    FRONT_CONTENT_WIDTH,
+    measureWith(ctx, fontOf(600, 34, family)),
+    `${model.yearLabel}년 ${model.monthLabel} · ${model.childName}`,
+    CARD_WIDTH - MARGIN * 2,
     1,
   );
-  ctx.fillText(label ?? caption, CARD_WIDTH / 2, 1100);
+  ctx.fillText(label ?? "", centerX, 1196);
   ctx.textAlign = "left";
-  drawFooter(ctx, family, "");
+  drawFooter(ctx, t, family, "");
 }
 
 function allText(model: MonthCardModel): string {
@@ -208,8 +296,8 @@ function allText(model: MonthCardModel): string {
     model.childName,
     model.ageLabel,
     model.quote,
-    ...model.items.flatMap((item) => [item.question, item.answer]),
-    "Hello Archive jr 이달의 기록 개의 한 달 년 “ · … 0123456789",
+    ...model.items.flatMap((item) => [item.dateLabel, item.question, item.answer]),
+    "Hello Archive jr 이달의 기록 개의 한 달 년 “ · … 0123456789/",
   ].join(" ");
 }
 
@@ -265,8 +353,9 @@ export function MonthCard({ model, fileBase }: { model: MonthCardModel; fileBase
       if (cancelled) return;
       const { front, back } = canvases.current;
       if (!front || !back) return;
-      drawFront(front, model, family);
-      drawBack(back, model, family, photo);
+      const theme = THEMES[seasonOfMonth(model.month)];
+      drawFront(front, model, family, theme);
+      drawBack(back, model, family, photo, theme);
       setStatus("ready");
     })().catch(() => {
       if (!cancelled) setStatus("error");
@@ -365,7 +454,7 @@ export function MonthCard({ model, fileBase }: { model: MonthCardModel; fileBase
           }}
           role="img"
           aria-label={frontLabel}
-          className={`aspect-[4/5] h-auto w-full border border-line ${ready && side === "front" ? "block" : "hidden"}`}
+          className={`aspect-[4/5] h-auto w-full [filter:drop-shadow(0_2px_10px_rgba(0,0,0,0.14))] ${ready && side === "front" ? "block" : "hidden"}`}
         />
         <canvas
           ref={(node) => {
@@ -373,7 +462,7 @@ export function MonthCard({ model, fileBase }: { model: MonthCardModel; fileBase
           }}
           role="img"
           aria-label={backLabel}
-          className={`aspect-[4/5] h-auto w-full border border-line ${ready && side === "back" ? "block" : "hidden"}`}
+          className={`aspect-[4/5] h-auto w-full [filter:drop-shadow(0_2px_10px_rgba(0,0,0,0.14))] ${ready && side === "back" ? "block" : "hidden"}`}
         />
       </div>
 

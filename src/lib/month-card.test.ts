@@ -4,9 +4,10 @@ import { makeChapter, parseChapterKey } from "./chapters.ts";
 import {
   buildMonthCard,
   CARD_QUOTES,
-  FRONT,
-  layoutFront,
+  layoutTimeline,
+  TIMELINE,
   pickQuote,
+  seasonOfMonth,
   wrapText,
 } from "./month-card.ts";
 import type { Entry } from "@/types/archive";
@@ -47,17 +48,18 @@ describe("글 줄바꿈", () => {
 });
 
 const item = (n: number, answerLength: number) => ({
+  dateLabel: `10/${n}`,
   question: `질문 ${n}은 무엇인가요?`,
   answer: "답".repeat(answerLength),
 });
 
-describe("앞면 배치", () => {
+describe("앞면(타임라인) 배치", () => {
   const m = (text: string) => Array.from(text).length * 30;
 
   it("항목 5개가 긴 답이어도 본문 영역 안에 들어가고 순서대로 놓인다", () => {
-    const blocks = layoutFront(m, m, [1, 2, 3, 4, 5].map((n) => item(n, 400)));
+    const blocks = layoutTimeline(m, m, [1, 2, 3, 4, 5].map((n) => item(n, 400)));
     assert.equal(blocks.length, 5);
-    let previous = FRONT.bodyTop - 1;
+    let previous = TIMELINE.bodyTop - 1;
     for (const block of blocks) {
       assert.ok(block.top > previous);
       previous = block.top;
@@ -65,20 +67,20 @@ describe("앞면 배치", () => {
     const last = blocks[4];
     const bottom =
       last.top +
-      last.question.length * FRONT.questionLineHeight +
-      FRONT.questionGap +
-      last.answer.length * FRONT.answerLineHeight;
-    assert.ok(bottom <= FRONT.bodyBottom, `bottom ${bottom}`);
+      last.question.length * TIMELINE.questionLineHeight +
+      TIMELINE.questionGap +
+      last.answer.length * TIMELINE.answerLineHeight;
+    assert.ok(bottom <= TIMELINE.bodyBottom, `bottom ${bottom}`);
   });
 
   it("항목이 적으면 답을 더 길게 보여 준다", () => {
-    const few = layoutFront(m, m, [item(1, 400), item(2, 400)]);
-    const many = layoutFront(m, m, [1, 2, 3, 4, 5].map((n) => item(n, 400)));
+    const few = layoutTimeline(m, m, [item(1, 400), item(2, 400)]);
+    const many = layoutTimeline(m, m, [1, 2, 3, 4, 5].map((n) => item(n, 400)));
     assert.ok(few[0].answer.length > many[0].answer.length);
   });
 
   it("항목이 없으면 빈 배치", () => {
-    assert.deepEqual(layoutFront(m, m, []), []);
+    assert.deepEqual(layoutTimeline(m, m, []), []);
   });
 });
 
@@ -120,6 +122,8 @@ describe("1개월 이야기 카드 만들기", () => {
     const card = buildMonthCard({ ...base, chapter: chapterOf(entries) });
     assert.ok(card);
     assert.deepEqual(card.items.map((i) => i.answer), ["답 2", "답 3", "답 4", "답 5", "답 6"]);
+    // 날짜는 작성일(KST): 2026-10-12T03:00Z → 10/12
+    assert.deepEqual(card.items.map((i) => i.dateLabel), ["10/12", "10/19", "10/26", "10/28", "10/30"]);
     assert.equal(card.entryCount, 6);
     assert.equal(card.monthLabel, "10월");
     assert.equal(card.yearLabel, "2026");
@@ -169,3 +173,16 @@ describe("글귀", () => {
     assert.ok(seen.size > 5);
   });
 });
+
+describe("계절별 카드 색", () => {
+  it("3~5월 봄, 6~8월 여름, 9~11월 가을, 12~2월 겨울", () => {
+    const expected = ["winter", "winter", "spring", "spring", "spring", "summer", "summer", "summer", "autumn", "autumn", "autumn", "winter"];
+    expected.forEach((season, index) => assert.equal(seasonOfMonth(index + 1), season, `${index + 1}월`));
+  });
+
+  it("카드 모델에 월 숫자가 들어간다", () => {
+    const card = buildMonthCard({ ...base, chapter: chapterOf([entry("1", "2026-10-05T03:00:00Z")]) });
+    assert.equal(card?.month, 10);
+  });
+});
+
