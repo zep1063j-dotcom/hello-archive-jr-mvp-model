@@ -45,7 +45,7 @@ docs/handoff/     # 인수인계 문서
 | `/onboarding` | 별도(`src/app/onboarding`, 내비 없는 화면) | 첫 로그인 시 자녀 등록. 자녀가 없으면 `requireChild()`가 `?next=`와 함께 이곳으로 보낸다. 구현됨 | 04 |
 | `/home` | app | 대시보드: 이번 주 질문 CTA, 최근 기록 | 01 |
 | `/write` | app | 이번 주 질문 + 기록 작성/수정, 홈의 이번 주 카드와 같은 컴포넌트를 펼쳐서 보여줌 (**이메일 딥링크 목적지**). 구현됨 | 05 |
-| `/archive` | app | 타임라인(최신 먼저, 월별 묶음) + 챕터 목록 링크 + 본문 검색(`?q=`, D-024). 구현됨 | 06, 09 |
+| `/archive` | app | 상단에 달별 이야기 카드 가로 목록(D-037, 검색 중 숨김) + 타임라인(최신 먼저, 월별 묶음) + 챕터 목록 링크 + 본문 검색(`?q=`, D-024). 구현됨 | 06, 09 |
 | `/archive/[entryId]` | app | 기록 상세 + 수정·삭제(05 구현됨), 기간·정리는 06 | 05, 06 |
 | `/archive/chapters/[period]` | app | `1m` 미니챕터 / `3m` 이야기집 / `1y` 기록집의 **챕터 목록**(기록 있는 구간만). 구현됨 | 06 |
 | `/archive/chapters/[period]/[chapterKey]` | app | 챕터 상세. 키 `2026-10`·`2026-q4`·`2026`, 구간 `[start,end)` KST, 작성일 기준, 오래된 기록 먼저. 구현됨 (D-021) | 06 |
@@ -53,6 +53,7 @@ docs/handoff/     # 인수인계 문서
 | `/write?week=YYYY-MM-DD` | app | 놓친 지난 질문에 기록(D-024). 쓸 수 없는 주는 안내 화면 | 09 |
 | `/archive/card/[monthKey]` | app | 1개월 이야기 카드(키 `2026-10`): 앞면 최근 기록 5개의 질문·답, 뒷면 사진/글귀, 브라우저 캔버스로 그려 PNG 저장·공유. 서버는 기록·사진 URL만 준다 (D-029) | 09 |
 | `/terms`, `/privacy` | public | 이용약관·개인정보 처리방침(초안, 법률 검토 필요). 소개·로그인 푸터와 프로필 아래에서 링크 (D-035) | 09 |
+| `/make` | app | 제작 탭: 1개월 이야기 카드 링크, 책 한 권 분량 요약, PDF·종이책 "받아보고 싶어요" 표시(실제 생성·주문 없음) (D-036) | 09 |
 | `/yearly` | app | 매년 같은 질문 5개: 지금 연도 답 쓰기·수정, 지난 연도 읽기 전용으로 나란히 (D-026) | 09 |
 | `/unsubscribe?u=&t=` | public | 메일의 수신 거부 링크 → 확인 화면 → 버튼으로 끔. 서명(HMAC) 검증, 로그인 불필요 (D-024) | 09 |
 | `/api/cron/weekly-email` | route handler | 예약 실행 진입점(`vercel.json`: 월·화 10:00 UTC = 19:00 KST). `CRON_SECRET` Bearer 검증, 집계 JSON만 응답. 구현됨, 실제 발송·Cron 동작은 미검증 (D-022) | 07 |
@@ -128,7 +129,7 @@ docs/handoff/     # 인수인계 문서
 - 타임라인 정렬 기준은 `created_at desc`. 기간 묶음은 달력 월·분기·연 고정 구간을 KST 반개구간 `[start, end)`로 정의하고 `created_at`의 KST 날짜로 소속을 정한다 (`src/lib/chapters.ts`, D-021).
 
 ### 세션 09 추가 테이블 (SQL은 `supabase/migrations/20261026000*`, 결정 D-025~D-027)
-- `question_bank`(읽기 전용 예시 질문), `week_question_choices`(부모·주별 질문 바꾸기, 기록이 있으면 RLS가 변경 차단), `yearly_answers`(자녀·연도·질문 키별 답), `entry_photos`(기록당 3장, 경로만), `children.photo_path`, `entries unique (id, user_id)`. 사진 파일은 비공개 Storage 버킷 `photos`(`<부모 id>/<파일>`), 보여줄 때 서명 URL.
+- `question_bank`(읽기 전용 예시 질문), `week_question_choices`(부모·주별 질문 바꾸기, 기록이 있으면 RLS가 변경 차단), `yearly_answers`(자녀·연도·질문 키별 답), `entry_photos`(기록당 3장, 경로만), `product_interests`(부모·상품 `pdf`/`book`당 1행, 제작 관심 표시, 수정 없음), `children.photo_path`, `entries unique (id, user_id)`. 사진 파일은 비공개 Storage 버킷 `photos`(`<부모 id>/<파일>`), 보여줄 때 서명 URL.
 
 ### email_deliveries
 | 컬럼 | 타입 | 비고 |

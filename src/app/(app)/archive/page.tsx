@@ -1,17 +1,23 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { EntryCard } from "@/components/entry-card";
+import { MonthCardCarousel } from "@/components/month-card-carousel";
 import { EmptyState, Eyebrow, PageSkeleton } from "@/components/states";
-import { CHAPTER_TITLES } from "@/lib/chapters";
+import { buildChapters, CHAPTER_TITLES } from "@/lib/chapters";
 import { requireChild } from "@/lib/children";
+import { todayKst } from "@/lib/date";
 import { normalizeSearchQuery, SEARCH_QUERY_MAX_LENGTH } from "@/lib/entry-search";
 import { groupByMonth } from "@/lib/entries";
+import { buildMonthCard } from "@/lib/month-card";
 import { getMyEntries } from "@/lib/my-entries";
 import type { ChapterPeriod } from "@/types/archive";
 
 export const metadata = { title: "아카이브 · Hello Archive jr" };
 
 const PERIODS: ChapterPeriod[] = ["1m", "3m", "1y"];
+
+/** 상단 카드 목록에 올리는 달의 최대 개수 (최신 달부터) */
+const MAX_CAROUSEL_CARDS = 24;
 
 export default function ArchivePage(props: PageProps<"/archive">) {
   return (
@@ -31,6 +37,23 @@ async function ArchiveContent({
   const child = await requireChild("/archive");
   const entries = await getMyEntries(child.id, search);
 
+  // 검색 중에는 검색 결과만 보이도록 카드 목록을 숨긴다(검색된 기록만으로는 한 달 카드를 만들 수 없다).
+  const today = todayKst();
+  const cards = search
+    ? []
+    : buildChapters(entries, "1m", today)
+        .slice(0, MAX_CAROUSEL_CARDS)
+        .flatMap((chapter) => {
+          const model = buildMonthCard({
+            chapter,
+            childId: child.id,
+            childName: child.nickname,
+            birthDate: child.birthDate,
+            today,
+          });
+          return model ? [{ key: chapter.key, isOpen: chapter.isOpen, model }] : [];
+        });
+
   return (
     <>
       <header>
@@ -42,6 +65,8 @@ async function ArchiveContent({
             : `지금까지 쌓은 기록 ${entries.length}개`}
         </p>
       </header>
+
+      <MonthCardCarousel cards={cards} />
 
       {/* 자바스크립트 없이도 동작하는 GET 폼 (주소에 검색어가 남아 새로고침·뒤로가기가 자연스럽다) */}
       <form role="search" action="/archive" method="get" className="flex gap-2">

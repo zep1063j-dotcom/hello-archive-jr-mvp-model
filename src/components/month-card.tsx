@@ -9,73 +9,13 @@ import {
   TIMELINE,
   wrapText,
   type MonthCardModel,
-  type Season,
 } from "@/lib/month-card";
+import { CARD_THEMES, type CardTheme } from "@/lib/month-card-theme";
 
 // 1개월 이야기 카드 (D-029). 캔버스에 그려서 화면에 보여 주고, 같은 캔버스를 PNG로 저장·공유한다
 // (보이는 것과 저장되는 것이 같다). 카드는 부모의 기기 안에서만 만들어지고 서버로 올라가지 않는다.
 // 앞면은 타임라인, 뒷면은 폴라로이드 (D-033). 바깥 모서리도 둥글게 자른다(모서리 바깥은 투명).
 
-// 카드 색은 달의 계절을 따른다(3~5월 연한 버터, 6~8월 연한 하늘, 9~11월 연한 라벤더, 12~2월 짙은 갈색).
-// 색을 바꾸려면 아래 값만 고친다. `polaroidInk`는 뒷면 폴라로이드(밝은 종이) 위 글자색이다.
-type Theme = {
-  front: string;
-  back: string;
-  polaroid: string;
-  polaroidInk: string;
-  ink: string;
-  soft: string;
-  mute: string;
-  accent: string;
-  line: string;
-};
-
-const THEMES: Record<Season, Theme> = {
-  spring: {
-    front: "#fbf0cf",
-    back: "#f7e3b0",
-    polaroid: "#fffdf5",
-    polaroidInk: "#1a1a1a",
-    ink: "#1a1a1a",
-    soft: "#5c5440",
-    mute: "#8a8062",
-    accent: "#d92f3e",
-    line: "#e3d6a8",
-  },
-  summer: {
-    front: "#e6eef6",
-    back: "#d3e2f0",
-    polaroid: "#fbfdff",
-    polaroidInk: "#14202c",
-    ink: "#14202c",
-    soft: "#475a6b",
-    mute: "#76889a",
-    accent: "#d92f3e",
-    line: "#c3d3e2",
-  },
-  autumn: {
-    front: "#eeeaf6",
-    back: "#ddd5ee",
-    polaroid: "#fdfcff",
-    polaroidInk: "#1d1a2b",
-    ink: "#1d1a2b",
-    soft: "#554f6b",
-    mute: "#837d99",
-    accent: "#d92f3e",
-    line: "#cfc7e2",
-  },
-  winter: {
-    front: "#3b2a21",
-    back: "#4d382c",
-    polaroid: "#f7f0e4",
-    polaroidInk: "#2a1d16",
-    ink: "#f7efe3",
-    soft: "#d9c8b4",
-    mute: "#a89580",
-    accent: "#ff8a80",
-    line: "#5a443a",
-  },
-};
 const MARGIN = TIMELINE.margin;
 /** 카드 바깥 모서리 둥글기(px). 모서리 바깥은 투명하게 저장된다. */
 const CARD_RADIUS = 56;
@@ -136,7 +76,7 @@ const measureWith = (ctx: CanvasRenderingContext2D, font: string) => (text: stri
   return ctx.measureText(text).width;
 };
 
-function drawFooter(ctx: CanvasRenderingContext2D, t: Theme, family: string, right: string) {
+function drawFooter(ctx: CanvasRenderingContext2D, t: CardTheme, family: string, right: string) {
   ctx.fillStyle = t.accent;
   ctx.beginPath();
   ctx.arc(MARGIN + 6, 1304, 6, 0, Math.PI * 2);
@@ -151,7 +91,7 @@ function drawFooter(ctx: CanvasRenderingContext2D, t: Theme, family: string, rig
 }
 
 /** 앞면: 큰 월 숫자 + 날짜가 붙은 세로 타임라인 */
-function drawFront(canvas: HTMLCanvasElement, model: MonthCardModel, family: string, t: Theme) {
+function drawFront(canvas: HTMLCanvasElement, model: MonthCardModel, family: string, t: CardTheme) {
   const ctx = setup(canvas, t.front);
   if (!ctx) return;
 
@@ -224,7 +164,7 @@ function drawBack(
   model: MonthCardModel,
   family: string,
   photo: HTMLImageElement | null,
-  t: Theme,
+  t: CardTheme,
 ) {
   const ctx = setup(canvas, t.back);
   if (!ctx) return;
@@ -353,7 +293,7 @@ export function MonthCard({ model, fileBase }: { model: MonthCardModel; fileBase
       if (cancelled) return;
       const { front, back } = canvases.current;
       if (!front || !back) return;
-      const theme = THEMES[seasonOfMonth(model.month)];
+      const theme = CARD_THEMES[seasonOfMonth(model.month)];
       drawFront(front, model, family, theme);
       drawBack(back, model, family, photo, theme);
       setStatus("ready");

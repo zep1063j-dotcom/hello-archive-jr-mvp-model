@@ -13,6 +13,7 @@ const NAV_ITEMS = [
     label: "아카이브",
     match: (p: string) => p.startsWith("/archive"),
   },
+  { href: "/make", label: "제작", match: (p: string) => p.startsWith("/make") },
   { href: "/profile", label: "프로필", match: (p: string) => p === "/profile" },
 ] as const;
 

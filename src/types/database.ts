@@ -102,6 +102,13 @@ export type Database = {
         Update: { body?: string };
         Relationships: [];
       };
+      product_interests: {
+        Row: { id: string; user_id: string; product: string; created_at: string };
+        Insert: { user_id: string; product: string };
+        // 수정할 컬럼이 없다(취소하면 지운다).
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       entry_photos: {
         Row: { id: string; user_id: string; entry_id: string; path: string; created_at: string };
         Insert: { user_id: string; entry_id: string; path: string };
