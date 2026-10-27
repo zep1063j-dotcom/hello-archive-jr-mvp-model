@@ -48,7 +48,7 @@ async function YearlyContent() {
         </p>
         {isBirthMonth ? (
           <p className="mt-3 border-l-4 border-brand bg-blush px-4 py-3 text-sm">
-            {child.nickname}의 생일 달이에요. 오늘 답해 두기 좋은 때예요.
+            <span className="break-all">{child.nickname}</span>의 생일 달이에요. 오늘 답해 두기 좋은 때예요.
           </p>
         ) : (
           <p className="mt-3 text-sm text-ink-mute">생일이 있는 달({birthMonth}월)에 쓰는 것을 추천해요. 언제든 올해 답을 쓸 수 있어요.</p>

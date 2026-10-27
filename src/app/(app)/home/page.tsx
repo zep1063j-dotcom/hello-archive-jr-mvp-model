@@ -19,12 +19,14 @@ export default function HomePage() {
 
 async function HomeContent() {
   const child = await requireChild("/home");
-  const [question, entries, photoUrl] = await Promise.all([
+  // 서로 기다릴 필요가 없는 조회는 한꺼번에 시작한다 (놓친 질문도 기록 조회와 나란히 읽는다).
+  const entriesPromise = getMyEntries(child.id);
+  const [question, entries, photoUrl, missed] = await Promise.all([
     getThisWeekQuestion(),
-    getMyEntries(child.id),
+    entriesPromise,
     getChildPhotoUrl(child.photoPath),
+    getMissedQuestions(child, entriesPromise),
   ]);
-  const missed = await getMissedQuestions(child, entries);
 
   return (
     <HomeHub

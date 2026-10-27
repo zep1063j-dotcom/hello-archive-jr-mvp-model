@@ -64,6 +64,21 @@ async function Chapter({
           {chapterSpanLabel(chapter)} · 기록 {chapter.entries.length}개
         </p>
       </header>
+      {period === "1m" && chapter.entries.length > 0 && (
+        <Link
+          href={`/archive/card/${chapter.key}`}
+          transitionTypes={["nav-forward"]}
+          className="-mt-3 flex min-h-14 items-center justify-between gap-3 bg-brand px-5 font-semibold text-white hover:bg-brand-deep"
+        >
+          <span>
+            이야기 카드 만들기
+            <span className="block text-[13px] font-normal text-white/80">
+              이미지로 저장하고 공유해요
+            </span>
+          </span>
+          <span aria-hidden>↗</span>
+        </Link>
+      )}
       {chapter.entries.length === 0 ? (
         <EmptyState
           title="이 기간에는 기록이 없어요"

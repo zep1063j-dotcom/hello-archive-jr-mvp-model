@@ -1,0 +1,171 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { makeChapter, parseChapterKey } from "./chapters.ts";
+import {
+  buildMonthCard,
+  CARD_QUOTES,
+  FRONT,
+  layoutFront,
+  pickQuote,
+  wrapText,
+} from "./month-card.ts";
+import type { Entry } from "@/types/archive";
+
+// 글자 한 개가 10px인 가짜 측정 함수
+const measure = (text: string) => Array.from(text).length * 10;
+
+describe("글 줄바꿈", () => {
+  it("띄어쓰기에서 나누고 줄 너비를 넘지 않는다", () => {
+    const lines = wrapText(measure, "아이가 오늘 공룡 블록으로 오래 놀았어요", 120, 5);
+    assert.ok(lines.length > 1);
+    for (const line of lines) assert.ok(measure(line) <= 120, line);
+    assert.equal(lines.join(" "), "아이가 오늘 공룡 블록으로 오래 놀았어요");
+  });
+
+  it("너무 긴 한 단어는 글자 단위로 나눈다", () => {
+    const lines = wrapText(measure, "가나다라마바사아자차카타파하", 50, 5);
+    assert.deepEqual(lines, ["가나다라마", "바사아자차", "카타파하"]);
+  });
+
+  it("줄 수를 넘으면 마지막 줄을 …로 줄이고 너비를 지킨다", () => {
+    const lines = wrapText(measure, "하나 둘 셋 넷 다섯 여섯 일곱 여덟 아홉 열", 60, 2);
+    assert.equal(lines.length, 2);
+    assert.ok(lines[1].endsWith("…"));
+    for (const line of lines) assert.ok(measure(line) <= 60, line);
+  });
+
+  it("빈 글·여러 공백·줄바꿈을 정리한다", () => {
+    assert.deepEqual(wrapText(measure, "   ", 100, 3), []);
+    assert.deepEqual(wrapText(measure, "가\n\n  나", 100, 3), ["가 나"]);
+  });
+
+  it("아주 긴 글에서도 멈추지 않고 줄 수를 지킨다", () => {
+    const lines = wrapText(measure, "가".repeat(5000), 100, 3);
+    assert.equal(lines.length, 3);
+    assert.ok(lines[2].endsWith("…"));
+  });
+});
+
+const item = (n: number, answerLength: number) => ({
+  question: `질문 ${n}은 무엇인가요?`,
+  answer: "답".repeat(answerLength),
+});
+
+describe("앞면 배치", () => {
+  const m = (text: string) => Array.from(text).length * 30;
+
+  it("항목 5개가 긴 답이어도 본문 영역 안에 들어가고 순서대로 놓인다", () => {
+    const blocks = layoutFront(m, m, [1, 2, 3, 4, 5].map((n) => item(n, 400)));
+    assert.equal(blocks.length, 5);
+    let previous = FRONT.bodyTop - 1;
+    for (const block of blocks) {
+      assert.ok(block.top > previous);
+      previous = block.top;
+    }
+    const last = blocks[4];
+    const bottom =
+      last.top +
+      last.question.length * FRONT.questionLineHeight +
+      FRONT.questionGap +
+      last.answer.length * FRONT.answerLineHeight;
+    assert.ok(bottom <= FRONT.bodyBottom, `bottom ${bottom}`);
+  });
+
+  it("항목이 적으면 답을 더 길게 보여 준다", () => {
+    const few = layoutFront(m, m, [item(1, 400), item(2, 400)]);
+    const many = layoutFront(m, m, [1, 2, 3, 4, 5].map((n) => item(n, 400)));
+    assert.ok(few[0].answer.length > many[0].answer.length);
+  });
+
+  it("항목이 없으면 빈 배치", () => {
+    assert.deepEqual(layoutFront(m, m, []), []);
+  });
+});
+
+function entry(id: string, createdAt: string, photoUrl?: string): Entry {
+  return {
+    id,
+    question: { id: `q-${id}`, weekStart: createdAt.slice(0, 10), body: `질문 ${id}` },
+    body: `답 ${id}`,
+    photos: photoUrl ? [{ id: `p-${id}`, url: photoUrl }] : [],
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
+function chapterOf(entries: Entry[], today = "2026-11-15") {
+  const range = parseChapterKey("1m", "2026-10");
+  assert.ok(range);
+  return makeChapter("1m", range, entries, today);
+}
+
+const base = { childId: "child-1", childName: "쫑", birthDate: "2022-05-14", today: "2026-11-15" };
+
+describe("1개월 이야기 카드 만들기", () => {
+  const entries = [
+    entry("1", "2026-10-05T03:00:00Z"),
+    entry("2", "2026-10-12T03:00:00Z", "https://example.test/a.jpg"),
+    entry("3", "2026-10-19T03:00:00Z"),
+    entry("4", "2026-10-26T03:00:00Z"),
+    entry("5", "2026-10-28T03:00:00Z"),
+    entry("6", "2026-10-30T03:00:00Z"),
+    entry("x", "2026-09-30T03:00:00Z", "https://example.test/old.jpg"), // 다른 달
+  ];
+
+  it("기록이 없으면 null", () => {
+    assert.equal(buildMonthCard({ ...base, chapter: chapterOf([entries[6]]) }), null);
+  });
+
+  it("앞면에는 그 달 최근 5개가 오래된 순으로 들어간다", () => {
+    const card = buildMonthCard({ ...base, chapter: chapterOf(entries) });
+    assert.ok(card);
+    assert.deepEqual(card.items.map((i) => i.answer), ["답 2", "답 3", "답 4", "답 5", "답 6"]);
+    assert.equal(card.entryCount, 6);
+    assert.equal(card.monthLabel, "10월");
+    assert.equal(card.yearLabel, "2026");
+  });
+
+  it("뒷면은 그 달의 사진이 있으면 가장 최근 사진, 다른 달 사진은 쓰지 않는다", () => {
+    const card = buildMonthCard({ ...base, chapter: chapterOf(entries) });
+    assert.deepEqual(card?.back, { kind: "photo", url: "https://example.test/a.jpg" });
+    const later = buildMonthCard({
+      ...base,
+      chapter: chapterOf([...entries, entry("7", "2026-10-31T03:00:00Z", "https://example.test/b.jpg")]),
+    });
+    assert.deepEqual(later?.back, { kind: "photo", url: "https://example.test/b.jpg" });
+  });
+
+  it("사진이 없으면 글귀, 같은 아이·달에는 늘 같은 글귀", () => {
+    const noPhoto = [entry("1", "2026-10-05T03:00:00Z"), entry("2", "2026-10-12T03:00:00Z")];
+    const a = buildMonthCard({ ...base, chapter: chapterOf(noPhoto) });
+    const b = buildMonthCard({ ...base, chapter: chapterOf(noPhoto) });
+    assert.equal(a?.back.kind, "quote");
+    assert.deepEqual(a?.back, b?.back);
+    assert.ok(CARD_QUOTES.includes(a?.quote ?? ""));
+  });
+
+  it("나이는 끝난 달이면 그 달 마지막 날, 진행 중이면 오늘 기준", () => {
+    const closed = buildMonthCard({ ...base, chapter: chapterOf(entries) });
+    assert.equal(closed?.ageLabel, "만 4세 5개월"); // 2022-05-14 → 2026-10-31
+    const open = buildMonthCard({
+      ...base,
+      today: "2026-10-10",
+      chapter: chapterOf(entries, "2026-10-10"),
+    });
+    assert.equal(open?.ageLabel, "만 4세 4개월"); // 2022-05-14 → 2026-10-10 (14일 전이라 한 달 덜)
+  });
+});
+
+describe("글귀", () => {
+  it("글귀 목록은 비어 있지 않고 중복이 없다", () => {
+    assert.ok(CARD_QUOTES.length >= 20);
+    assert.equal(new Set(CARD_QUOTES).size, CARD_QUOTES.length);
+    for (const quote of CARD_QUOTES) assert.ok(quote.length > 0 && quote.length <= 40, quote);
+  });
+
+  it("시드마다 목록 안의 글귀를 같게 돌려주고, 시드가 다르면 여러 글귀가 나온다", () => {
+    assert.equal(pickQuote("a:2026-10"), pickQuote("a:2026-10"));
+    const seen = new Set(Array.from({ length: 40 }, (_, i) => pickQuote(`child-${i}:2026-10`)));
+    assert.ok(seen.size > 5);
+  });
+});

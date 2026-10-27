@@ -83,13 +83,18 @@ export async function getMyEntries(childId: string, search?: string | null): Pro
     .eq("user_id", user.id)
     .eq("child_id", childId);
   if (search) query = query.ilike("body", toLikePattern(search));
-  const { data, error } = await query.order("created_at", { ascending: false });
+  // 기록·사진 목록·질문 선택은 서로 기다릴 필요가 없어 동시에 읽는다 (왕복 횟수를 줄인다).
+  const [{ data, error }, choices, photos] = await Promise.all([
+    query.order("created_at", { ascending: false }),
+    getMyChoices(),
+    getMyPhotoRows(supabase, user.id),
+  ]);
   if (error) {
     console.error("[entries] 기록 조회 실패", error.code);
     throw new Error("기록을 불러오지 못했어요.");
   }
-  const [choices, photos] = await Promise.all([getMyChoices(), getPhotosByEntry(supabase, user.id, data.map((row) => row.id))]);
-  return data.map((row) => toEntry(row, choices.get(row.weekly_questions.id), photos.get(row.id)));
+  const urls = await signPhotosForEntries(supabase, photos, new Set(data.map((row) => row.id)));
+  return data.map((row) => toEntry(row, choices.get(row.weekly_questions.id), urls.get(row.id)));
 }
 
 const UUID_PATTERN =
@@ -117,26 +122,33 @@ export async function getMyEntry(entryId: string): Promise<Entry | null> {
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
-/** 기록 id → 사진 목록(오래된 것 먼저, 서명 URL 포함). 사진 테이블이 없으면 빈 결과(배포 순서 실수 대비, 로그만 남김). */
-async function getPhotosByEntry(
-  supabase: Supabase,
-  userId: string,
-  entryIds: string[],
-): Promise<Map<string, EntryPhoto[]>> {
-  const result = new Map<string, EntryPhoto[]>();
-  if (entryIds.length === 0) return result;
+type PhotoRow = { id: string; entry_id: string; path: string };
+
+/** 내 기록 사진 행 전부(오래된 것 먼저). 사진 테이블이 없으면 빈 목록(배포 순서 실수 대비, 로그만 남김). */
+async function getMyPhotoRows(supabase: Supabase, userId: string): Promise<PhotoRow[]> {
   const { data, error } = await supabase
     .from("entry_photos")
     .select("id, entry_id, path")
     .eq("user_id", userId)
-    .in("entry_id", entryIds)
     .order("created_at", { ascending: true });
   if (error) {
     console.error("[photos] 기록 사진 조회 실패", error.code);
-    return result;
+    return [];
   }
-  const urls = await signPhotoPaths(supabase, data.map((row) => row.path));
-  for (const row of data) {
+  return data;
+}
+
+/** 대상 기록(`entryIds`)의 사진만 서명 URL을 만들어 기록 id → 사진 목록으로 묶는다. */
+async function signPhotosForEntries(
+  supabase: Supabase,
+  rows: PhotoRow[],
+  entryIds: Set<string>,
+): Promise<Map<string, EntryPhoto[]>> {
+  const result = new Map<string, EntryPhoto[]>();
+  const wanted = rows.filter((row) => entryIds.has(row.entry_id));
+  if (wanted.length === 0) return result;
+  const urls = await signPhotoPaths(supabase, wanted.map((row) => row.path));
+  for (const row of wanted) {
     const url = urls.get(row.path);
     if (!url) continue;
     const list = result.get(row.entry_id) ?? [];
@@ -144,6 +156,16 @@ async function getPhotosByEntry(
     result.set(row.entry_id, list);
   }
   return result;
+}
+
+/** 기록 id → 사진 목록(오래된 것 먼저, 서명 URL 포함). */
+async function getPhotosByEntry(
+  supabase: Supabase,
+  userId: string,
+  entryIds: string[],
+): Promise<Map<string, EntryPhoto[]>> {
+  if (entryIds.length === 0) return new Map();
+  return signPhotosForEntries(supabase, await getMyPhotoRows(supabase, userId), new Set(entryIds));
 }
 
 type QuestionRow = { id: string; week_start: string; body: string; hint: string | null };
@@ -157,29 +179,36 @@ const toQuestion = (row: QuestionRow): WeeklyQuestion => ({
 
 /**
  * 아직 답하지 않은 지난 질문 (최근 주 먼저, D-024). 자녀를 등록한 주 이후 ~ 지난주, 시드에 있는 주만.
- * `entries`는 이미 읽은 해당 자녀의 기록 목록을 넘겨 한 번 더 조회하지 않는다.
+ * `entries`는 해당 자녀의 기록 목록(또는 그것을 읽는 중인 Promise)을 넘겨 한 번 더 조회하지 않는다.
+ * Promise를 넘기면 질문 조회가 기록 조회와 동시에 진행된다.
  */
-export async function getMissedQuestions(child: Child, entries: Entry[]): Promise<WeeklyQuestion[]> {
+export async function getMissedQuestions(
+  child: Child,
+  entries: Entry[] | Promise<Entry[]>,
+): Promise<WeeklyQuestion[]> {
   await requireUser();
   const thisWeekStart = weekStartOf(todayKst());
   const joined = joinedWeekStart(child.createdAt);
   if (joined >= thisWeekStart) return [];
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("weekly_questions")
-    .select("id, week_start, body, hint")
-    .gte("week_start", joined)
-    .lt("week_start", thisWeekStart)
-    .order("week_start", { ascending: false });
+  const [{ data, error }, choices, answered] = await Promise.all([
+    supabase
+      .from("weekly_questions")
+      .select("id, week_start, body, hint")
+      .gte("week_start", joined)
+      .lt("week_start", thisWeekStart)
+      .order("week_start", { ascending: false }),
+    getMyChoices(),
+    entries,
+  ]);
   if (error) {
     console.error("[questions] 지난 질문 조회 실패", error.code);
     throw new Error("지난 질문을 불러오지 못했어요.");
   }
-  const choices = await getMyChoices();
   return missedQuestions({
     questions: data.map((row) => applyChoice(toQuestion(row), choices.get(row.id))),
-    answeredQuestionIds: new Set(entries.map((entry) => entry.question.id)),
+    answeredQuestionIds: new Set(answered.map((entry) => entry.question.id)),
     thisWeekStart,
     joinedWeekStart: joined,
   });

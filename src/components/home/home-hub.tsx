@@ -59,7 +59,7 @@ export function HomeHub({
       <header className="flex items-center gap-4">
         <ChildAvatar nickname={child.nickname} photoUrl={photoUrl} />
         <div className="min-w-0 flex-1">
-          <h1 className="font-serif text-2xl font-bold leading-tight">{child.nickname}</h1>
+          <h1 className="font-serif text-2xl font-bold leading-tight break-all">{child.nickname}</h1>
           <p className="text-sm text-ink-soft">{formatAge(child.birthDate, today)}</p>
         </div>
         <p
