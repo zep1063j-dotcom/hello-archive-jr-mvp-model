@@ -80,6 +80,9 @@ export function YearlyForm({ year, questions }: { year: number; questions: Quest
           {pending ? "저장하는 중…" : `${year}년 답 저장하기`}
           <span aria-hidden>↗</span>
         </button>
+        <p className="text-[13px] leading-relaxed text-ink-mute">
+          {year + 1}년이 되면 {year}년에 쓴 답변은 수정할 수 없어요. 그때부터는 지난 답으로 나란히 보여요.
+        </p>
       </div>
     </form>
   );

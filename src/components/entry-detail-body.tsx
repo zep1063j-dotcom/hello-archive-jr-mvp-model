@@ -7,7 +7,7 @@ import {
   type DeleteEntryState,
 } from "@/app/actions/entries";
 import { canSubmitBody, EntryBodyField } from "@/components/entry-body-field";
-import { EntryPhotoField, PhotoStrip, useEntryPhotos } from "@/components/entry-photo-field";
+import { EntryPhotoField, PhotoGallery, useEntryPhotos } from "@/components/entry-photo-field";
 import type { EntryPhoto } from "@/types/archive";
 
 type Mode = "view" | "edit" | "confirm-delete";
@@ -138,7 +138,7 @@ export function EntryDetailBody({
         {shownBody}
       </p>
       <div className="mt-6">
-        <PhotoStrip photos={photos.visibleExisting} />
+        <PhotoGallery photos={photos.visibleExisting} />
       </div>
       <div className="mt-8 flex flex-col gap-3">
         {mode === "confirm-delete" ? (

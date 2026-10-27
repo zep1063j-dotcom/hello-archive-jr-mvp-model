@@ -193,6 +193,29 @@ function RemoveButton({ label, disabled, onClick }: { label: string; disabled?: 
   );
 }
 
+/**
+ * 기록 상세의 큰 사진 보기. 원본 크기와 상관없이 가로를 꽉 채워 키우고 가운데에 놓는다
+ * (세로로 아주 긴 사진은 화면 높이 안에 맞춘다).
+ */
+export function PhotoGallery({ photos }: { photos: EntryPhoto[] }) {
+  if (photos.length === 0) return null;
+  return (
+    <ul className="flex flex-col gap-4" aria-label={`붙인 사진 ${photos.length}장`}>
+      {photos.map((photo) => (
+        // 사진이 오기 전에도 자리를 잡아 두어(min-h) 글이 아래로 밀리지 않게 한다. 맨 위쪽에 있는 사진이라 바로 불러온다.
+        <li key={photo.id} className="flex min-h-40 justify-center border border-line bg-paper-deep">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photo.url}
+            alt="붙인 사진"
+            className="block h-auto max-h-[80vh] w-full object-contain"
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** 읽기 전용 사진 줄 (저장된 기록·아카이브). */
 export function PhotoStrip({ photos, size = "md" }: { photos: EntryPhoto[]; size?: "sm" | "md" }) {
   if (photos.length === 0) return null;

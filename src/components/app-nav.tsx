@@ -6,8 +6,8 @@ import { Suspense, ViewTransition } from "react";
 import { Logo } from "@/components/logo";
 
 const NAV_ITEMS = [
-  { href: "/home", label: "홈", match: (p: string) => p === "/home" },
-  { href: "/write", label: "기록 쓰기", match: (p: string) => p === "/write" },
+  // 기록 쓰기는 홈의 이번 주 카드에서 한다. `/write`는 메일 링크·지난 질문 쓰기용 주소로 남겨 두고 홈 메뉴를 선택된 것으로 보인다.
+  { href: "/home", label: "홈", match: (p: string) => p === "/home" || p === "/write" },
   {
     href: "/archive",
     label: "아카이브",
