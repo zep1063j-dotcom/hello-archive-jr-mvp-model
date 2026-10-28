@@ -42,7 +42,7 @@ docs/handoff/     # 인수인계 문서
 | `/login` | public | 이메일 입력 → 메일의 숫자 코드 입력. `?next=` 지원. 구현됨 | 03 |
 | ~~`/auth/callback`~~ | — | **만들지 않음**: 코드 방식(D-016)이라 서버 액션이 확인한다 | — |
 | ~~`/auth/expired`~~ | — | **만들지 않음**: 만료·오류는 폼 안내 + 코드 다시 받기 | — |
-| `/onboarding` | 별도(`src/app/onboarding`, 내비 없는 화면) | 첫 로그인 시 자녀 등록. 자녀가 없으면 `requireChild()`가 `?next=`와 함께 이곳으로 보낸다. 구현됨 | 04 |
+| `/onboarding` | 별도(`src/app/onboarding`) | **옛 주소: `/home`으로 이동**. 첫 가입 환영 온보딩은 `/home` 위의 한 창(`OnboardingDialog`)이다(환영 → 아이 등록 → 환영, 계정 기준 `parent_settings.onboarding_completed_at`, D-040). 자녀가 없으면 다른 보호 화면도 `requireChild()`가 `/home`으로 보낸다 | 04, 09 |
 | `/home` | app | 대시보드: 이번 주 질문 CTA, 최근 기록 | 01 |
 | `/write` | app | 이번 주 질문 + 기록 작성/수정, 홈의 이번 주 카드와 같은 컴포넌트를 펼쳐서 보여줌 (**이메일 딥링크 목적지**). 구현됨 | 05 |
 | `/archive` | app | 상단에 달별 이야기 카드 가로 목록(D-037, 검색 중 숨김) + 타임라인(최신 먼저, 월별 묶음) + 챕터 목록 링크 + 본문 검색(`?q=`, D-024). 구현됨 | 06, 09 |
@@ -65,7 +65,7 @@ docs/handoff/     # 인수인계 문서
 내비게이션(홈 / 기록 쓰기 / 아카이브 / 프로필)은 **상단 고정**이다 (D-010). 모바일은 로고 줄 아래에 메뉴 줄, md 이상은 한 줄. 본문은 중앙 정렬 컬럼.
 
 ## 3. 사용자 흐름
-1. 신규: `/` → `/login` → 메일 인증 → `/onboarding`(자녀 등록) → `/write`.
+1. 신규: `/` → `/login` → 메일 인증 → `/home` 위의 환영 온보딩(아이 등록) → 홈의 이번 주 질문 (D-040).
 2. 재방문(세션 유효): `/home` → `/write` → 저장 → 저장 상태 표시 → `/archive`.
 3. 이메일 링크: 메일의 `/write` 링크 클릭 → 세션 유효하면 즉시 작성 화면 / 없으면 `/login?next=/write` → 이메일 입력 → 메일의 코드 입력 → `/write`. (SESSION 07에서 실제 메일로 검증)
 4. 코드 만료·오류: 폼 안에서 안내하고 "코드 다시 받기"로 같은 이메일에 새 코드를 보낸다(`next` 유지).
@@ -85,6 +85,7 @@ docs/handoff/     # 인수인계 문서
 | 컬럼 | 타입 | 비고 |
 |---|---|---|
 | user_id | uuid PK, FK auth.users | 부모 1:1 |
+| onboarding_completed_at | timestamptz null | 첫 가입 환영 온보딩을 끝낸 시각(null=아직). 마이그레이션 `20261029000000`이 기존 사용자를 채움 (D-040) |
 | email_consent | boolean not null default false | 주간 이메일 수신 동의 (기본 거부) |
 | consent_updated_at | timestamptz | 동의/철회 시각 |
 | created_at / updated_at | timestamptz | |

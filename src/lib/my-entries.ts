@@ -213,7 +213,7 @@ export async function getMissedQuestions(
   const mine = data.filter((row) => row.stage === stageAt(child.birthDate, row.week_start));
   return missedQuestions({
     questions: mine.map((row) => applyChoice(toQuestion(row), choices.get(row.id))),
-    answeredQuestionIds: new Set(answered.map((entry) => entry.question.id)),
+    answeredWeekStarts: new Set(answered.map((entry) => entry.question.weekStart)),
     thisWeekStart,
     joinedWeekStart: joined,
   });

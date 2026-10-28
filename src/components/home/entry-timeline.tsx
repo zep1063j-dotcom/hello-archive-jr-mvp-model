@@ -32,7 +32,7 @@ export function EntryTimeline({
                   key={entry.id}
                   id={`entry-${entry.id}`}
                   className={`scroll-mt-28 border-t border-line first:border-t-0 ${
-                    isOpen ? "bg-sheet" : ""
+                    isOpen ? "rounded-2xl bg-sheet" : ""
                   }`}
                 >
                   <button

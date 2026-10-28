@@ -4,7 +4,8 @@ import Link from "next/link";
 import { formatMonthDay } from "@/lib/date";
 import type { WeekSlot } from "@/lib/entries";
 
-// 최근 8주 기록 현황. 쓴 주를 누르면 아래 타임라인에서 그 기록이 펼쳐진다.
+// 함께한 주(가입한 주부터 최대 8주)의 기록 현황. 쓴 주를 누르면 아래 타임라인에서 그 기록이 펼쳐진다.
+// 비어 있는 주는 실패나 결석처럼 보이지 않게 조용한 빈 칸으로만 둔다.
 export function WeekStrip({
   weeks,
   missedWeekStarts,
@@ -16,10 +17,10 @@ export function WeekStrip({
   onSelect: (entryId: string) => void;
 }) {
   return (
-    <ol className="grid grid-cols-8 gap-1.5">
+    <ol className="grid auto-cols-[minmax(0,3.25rem)] grid-flow-col gap-1.5">
       {weeks.map((week) => {
         const label = week.isCurrent ? "이번 주" : formatMonthDay(week.weekStart);
-        const base = "flex h-12 w-full items-center justify-center text-sm transition-all";
+        const base = "flex h-12 w-full items-center justify-center rounded-xl text-sm transition-all";
         return (
           <li key={week.weekStart} className="flex flex-col items-center gap-1.5">
             {week.entry ? (
@@ -41,11 +42,11 @@ export function WeekStrip({
               </Link>
             ) : (
               <span
-                aria-label={`${formatMonthDay(week.weekStart)} 주 ${week.isCurrent ? "아직 기록 전" : "기록 없음"}`}
+                aria-label={`${formatMonthDay(week.weekStart)} 주 ${week.isCurrent ? "아직 기록 전" : "비어 있는 주"}`}
                 className={`${base} ${
                   week.isCurrent
                     ? "animate-pulse border-2 border-dashed border-brand text-brand"
-                    : "border border-line bg-paper-deep/50 text-ink-mute"
+                    : "border border-line/70 bg-transparent text-ink-mute"
                 }`}
               >
                 {week.isCurrent ? "·" : ""}

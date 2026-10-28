@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   CARD_HEIGHT,
@@ -8,6 +9,7 @@ import {
   seasonOfMonth,
   TIMELINE,
   wrapText,
+  type MeasureFor,
   type MonthCardModel,
 } from "@/lib/month-card";
 import { CARD_THEMES, type CardTheme } from "@/lib/month-card-theme";
@@ -90,10 +92,13 @@ function drawFooter(ctx: CanvasRenderingContext2D, t: CardTheme, family: string,
   ctx.textAlign = "left";
 }
 
-/** 앞면: 큰 월 숫자 + 날짜가 붙은 세로 타임라인 */
-function drawFront(canvas: HTMLCanvasElement, model: MonthCardModel, family: string, t: CardTheme) {
+/**
+ * 앞면: 큰 월 숫자 + 날짜가 붙은 세로 타임라인. 기록이 적으면 글자를 크게 그린다 (D-042).
+ * 긴 질문·답이 줄어 다 담기지 않았는지(truncated)를 돌려준다. 화면에 보이는 캔버스가 곧 저장·공유되는 이미지다.
+ */
+function drawFront(canvas: HTMLCanvasElement, model: MonthCardModel, family: string, t: CardTheme): { truncated: boolean } {
   const ctx = setup(canvas, t.front);
-  if (!ctx) return;
+  if (!ctx) return { truncated: false };
 
   const monthNumber = model.monthLabel.replace("월", "");
   ctx.textBaseline = "alphabetic";
@@ -116,12 +121,16 @@ function drawFront(canvas: HTMLCanvasElement, model: MonthCardModel, family: str
   ctx.fillText(whoLine ?? "", CARD_WIDTH - MARGIN, 178);
   ctx.textAlign = "left";
 
-  const questionFont = fontOf(600, TIMELINE.questionSize, family);
-  const answerFont = fontOf(400, TIMELINE.answerSize, family);
-  const blocks = layoutTimeline(measureWith(ctx, questionFont), measureWith(ctx, answerFont), model.items);
+  const measureFor: MeasureFor = (kind, size) =>
+    measureWith(ctx, fontOf(kind === "question" ? 600 : 400, size, family));
+  const layout = layoutTimeline(measureFor, model.items);
+  if (!layout) return { truncated: false };
+  const { scale, blocks } = layout;
+  const questionFont = fontOf(600, scale.questionSize, family);
+  const answerFont = fontOf(400, scale.answerSize, family);
 
   const dotX = TIMELINE.dotLeft + TIMELINE.dotSize / 2;
-  const dotYs = blocks.map((block) => block.top + TIMELINE.questionLineHeight / 2);
+  const dotYs = blocks.map((block) => block.top + scale.questionLineHeight / 2);
   if (dotYs.length > 1) {
     ctx.fillStyle = t.line;
     roundedRect(ctx, dotX - 2, dotYs[0], 4, dotYs[dotYs.length - 1] - dotYs[0], 2);
@@ -143,19 +152,20 @@ function drawFront(canvas: HTMLCanvasElement, model: MonthCardModel, family: str
     ctx.fillStyle = t.accent;
     ctx.font = questionFont;
     for (const line of block.question) {
-      ctx.fillText(line, TIMELINE.textLeft, y + TIMELINE.questionLineHeight / 2);
-      y += TIMELINE.questionLineHeight;
+      ctx.fillText(line, TIMELINE.textLeft, y + scale.questionLineHeight / 2);
+      y += scale.questionLineHeight;
     }
     y += TIMELINE.questionGap;
     ctx.fillStyle = t.ink;
     ctx.font = answerFont;
     for (const line of block.answer) {
-      ctx.fillText(line, TIMELINE.textLeft, y + TIMELINE.answerLineHeight / 2);
-      y += TIMELINE.answerLineHeight;
+      ctx.fillText(line, TIMELINE.textLeft, y + scale.answerLineHeight / 2);
+      y += scale.answerLineHeight;
     }
   });
 
   drawFooter(ctx, t, family, `이달의 기록 ${model.entryCount}개`);
+  return { truncated: layout.truncated };
 }
 
 /** 뒷면: 살짝 기울어진 폴라로이드. 사진이 있으면 사진 + 글귀, 없으면 큰 글귀 */
@@ -261,7 +271,16 @@ function supportsFileShare(): boolean {
   return typeof navigator.share === "function" && navigator.canShare?.({ files: [probe] }) === true;
 }
 
-export function MonthCard({ model, fileBase }: { model: MonthCardModel; fileBase: string }) {
+export function MonthCard({
+  model,
+  fileBase,
+  fullHref,
+}: {
+  model: MonthCardModel;
+  fileBase: string;
+  /** 이 달의 전체 기록 화면. 카드에 다 담기지 않은 내용을 볼 수 있는 곳 */
+  fullHref: string;
+}) {
   const probeRef = useRef<HTMLSpanElement>(null);
   const canvases = useRef<Record<Side, HTMLCanvasElement | null>>({ front: null, back: null });
   const [side, setSide] = useState<Side>("front");
@@ -270,6 +289,7 @@ export function MonthCard({ model, fileBase }: { model: MonthCardModel; fileBase
   const canShare = useSyncExternalStore(subscribeNothing, supportsFileShare, () => false);
   const [busy, setBusy] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
+  const [truncated, setTruncated] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -294,8 +314,9 @@ export function MonthCard({ model, fileBase }: { model: MonthCardModel; fileBase
       const { front, back } = canvases.current;
       if (!front || !back) return;
       const theme = CARD_THEMES[seasonOfMonth(model.month)];
-      drawFront(front, model, family, theme);
+      const drawn = drawFront(front, model, family, theme);
       drawBack(back, model, family, photo, theme);
+      setTruncated(drawn.truncated);
       setStatus("ready");
     })().catch(() => {
       if (!cancelled) setStatus("error");
@@ -334,7 +355,7 @@ export function MonthCard({ model, fileBase }: { model: MonthCardModel; fileBase
         ),
       );
       if (!navigator.canShare?.({ files })) {
-        setNotice("이 기기에서는 공유할 수 없어요. 앞면·뒷면을 각각 저장해 주세요.");
+        setNotice("이 기기에서는 바로 공유할 수 없어요. 앞면·뒷면 이미지를 저장한 뒤 메신저나 SNS에서 보내 주세요.");
         return;
       }
       await navigator.share({ files, title: `${model.yearLabel}년 ${model.monthLabel} 이야기 카드` });
@@ -360,7 +381,7 @@ export function MonthCard({ model, fileBase }: { model: MonthCardModel; fileBase
       {/* 카드 글꼴(명조)을 읽어 오기 위한 보이지 않는 요소 */}
       <span ref={probeRef} aria-hidden className="font-serif invisible absolute" />
 
-      <div role="group" aria-label="카드 면 고르기" className="grid grid-cols-2 border border-ink">
+      <div role="group" aria-label="카드 면 고르기" className="grid grid-cols-2 overflow-hidden rounded-xl border border-ink">
         {(["front", "back"] as const).map((target) => (
           <button
             key={target}
@@ -380,7 +401,7 @@ export function MonthCard({ model, fileBase }: { model: MonthCardModel; fileBase
         {!ready && (
           <div
             role="status"
-            className={`grid aspect-[4/5] w-full place-items-center border text-sm ${
+            className={`grid aspect-[4/5] w-full place-items-center rounded-3xl border text-sm ${
               status === "error" ? "border-brand text-brand-deep" : "animate-pulse border-line bg-paper-deep text-ink-soft"
             }`}
           >
@@ -410,13 +431,32 @@ export function MonthCard({ model, fileBase }: { model: MonthCardModel; fileBase
         <p className="text-sm text-ink-soft">사진을 불러오지 못해 글귀로 보여 드려요.</p>
       )}
 
+      {ready && (truncated || model.entryCount > model.items.length) && (
+        <p role="note" className="rounded-xl bg-paper-deep/60 px-4 py-3 text-[13px] leading-relaxed text-ink-soft">
+          {model.entryCount > model.items.length && `이 달의 기록 ${model.entryCount}개 중 최근 ${model.items.length}개만 카드에 담겼어요. `}
+          {truncated && "긴 질문이나 답은 카드에서 줄여서 보여요. "}
+          <Link href={fullHref} className="font-semibold underline underline-offset-4 hover:text-brand">
+            이 달의 전체 기록 보기
+          </Link>
+        </p>
+      )}
+
       <div className="flex flex-col gap-2">
+        <p className="rounded-xl bg-paper-deep/60 px-4 py-3 text-[12px] leading-relaxed text-ink-soft">
+          공유하거나 저장한 이미지에는 아이 별명({model.childName})·나이와 카드에 보이는 질문·답이 그대로 담기고, 뒷면에는 이 달의 사진이 들어갈 수 있어요.
+          이미지를 받은 사람은 누구나 볼 수 있으니 확인한 뒤에 공유해 주세요.
+        </p>
+        {!canShare && (
+          <p className="text-[12px] leading-relaxed text-ink-soft">
+            이 기기에서는 바로 공유가 지원되지 않아요. 아래에서 이미지를 저장해 보내 주세요.
+          </p>
+        )}
         {canShare && (
           <button
             type="button"
             onClick={share}
             disabled={!ready || busy}
-            className="flex min-h-12 w-full items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
+            className="flex min-h-12 w-full items-center justify-between rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
           >
             앞면·뒷면 함께 공유하기
             <span aria-hidden>↗</span>
@@ -429,7 +469,7 @@ export function MonthCard({ model, fileBase }: { model: MonthCardModel; fileBase
               type="button"
               onClick={() => save(target)}
               disabled={!ready || busy}
-              className="min-h-12 border border-ink px-3 font-semibold hover:bg-ink hover:text-paper disabled:opacity-60"
+              className="min-h-12 rounded-xl border border-ink px-3 font-semibold hover:bg-ink hover:text-paper disabled:opacity-60"
             >
               {SIDE_LABEL[target]} 이미지 저장
             </button>

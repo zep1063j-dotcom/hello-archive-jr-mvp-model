@@ -16,11 +16,13 @@ export type Database = {
           user_id: string;
           email_consent: boolean;
           consent_updated_at: string;
+          /** 첫 가입 환영 온보딩을 끝낸 시각. null이면 아직 끝나지 않음 (D-040) */
+          onboarding_completed_at: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: { user_id: string; email_consent?: boolean };
-        Update: { email_consent?: boolean };
+        Update: { email_consent?: boolean; onboarding_completed_at?: string };
         Relationships: [];
       };
       children: {

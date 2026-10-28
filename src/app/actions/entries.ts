@@ -11,6 +11,7 @@ import { isPastQuestionAnswerable, joinedWeekStart } from "@/lib/past-questions"
 import { PHOTO_BUCKET } from "@/lib/photo-rules";
 import { todayKst, weekStartOf } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
+import { findWeekEntry } from "@/lib/week-entry";
 
 // 기록 저장·수정·삭제. 소유자(user_id)와 자녀는 클라이언트 값이 아니라 서버가 확인한 로그인 사용자·그 부모의 자녀로 정한다.
 // 소유권은 RLS와 `user_id` 조건 양쪽에서 확인한다 (RLS가 걸러내면 오류 없이 0행이라 갱신 행 수도 확인).
@@ -45,56 +46,50 @@ async function updateBody(
 }
 
 /**
- * 한 질문에 대한 기록을 만들거나(없을 때) 수정한다(있을 때). 이번 주·지난 질문 저장이 함께 쓴다.
- * 같은 질문에 다시 쓰면 새 기록이 아니라 수정이고(D-005), 동시 요청이 겹쳐도 기록은 1개다.
+ * 한 주의 질문에 대한 기록을 만들거나(없을 때) 수정한다(있을 때). 이번 주·지난 질문 저장이 함께 쓴다.
+ * 같은 주에 다시 쓰면 새 기록이 아니라 수정이고(D-005), 동시 요청이 겹쳐도 기록은 1개다.
+ * "같은 주"는 질문 행이 아니라 주(`week_start`)로 판단한다: 시기별 질문 행이 달라도(D-038) 한 주의 기록은 하나이고,
+ * 이미 있는 기록은 자기 질문 행에 그대로 둔 채 본문만 고친다 (D-039).
  * 호출부가 질문과 본문을 이미 검증했다는 전제다.
  */
 async function saveEntryForQuestion(
   userId: string,
   childId: string,
-  questionId: string,
+  question: { id: string; weekStart: string },
   body: string,
 ): Promise<EntryActionResult> {
   const supabase = await createClient();
-  const findExisting = () =>
-    supabase
-      .from("entries")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("child_id", childId)
-      .eq("weekly_question_id", questionId)
-      .maybeSingle();
-
-  const { data: existing, error: findError } = await findExisting();
-  if (findError) {
-    console.error("[entries] 기존 기록 확인 실패", findError.code);
+  let existing: Awaited<ReturnType<typeof findWeekEntry>>;
+  try {
+    existing = await findWeekEntry(supabase, userId, childId, question.weekStart);
+  } catch {
     return { ok: false, error: SAVE_FAILED };
   }
 
   let entryId: string;
   if (existing) {
-    if (!(await updateBody(supabase, userId, existing.id, body))) {
+    if (!(await updateBody(supabase, userId, existing.entryId, body))) {
       return { ok: false, error: SAVE_FAILED };
     }
-    entryId = existing.id;
+    entryId = existing.entryId;
   } else {
     const { data: created, error } = await supabase
       .from("entries")
       .insert({
         user_id: userId,
         child_id: childId,
-        weekly_question_id: questionId,
+        weekly_question_id: question.id,
         body,
       })
       .select("id")
       .single();
     if (error?.code === "23505") {
       // 동시 요청(다른 탭·이중 제출)이 먼저 만들었다. 새 기록을 또 만들지 않고 그 기록을 수정한다.
-      const { data: raced } = await findExisting();
-      if (!raced || !(await updateBody(supabase, userId, raced.id, body))) {
+      const raced = await findWeekEntry(supabase, userId, childId, question.weekStart).catch(() => null);
+      if (!raced || !(await updateBody(supabase, userId, raced.entryId, body))) {
         return { ok: false, error: SAVE_FAILED };
       }
-      entryId = raced.id;
+      entryId = raced.entryId;
     } else if (error || !created) {
       console.error("[entries] 기록 저장 실패", error?.code ?? "no-row");
       return { ok: false, error: SAVE_FAILED };
@@ -125,18 +120,28 @@ export async function saveThisWeekEntry(input: {
     return { ok: false, error: "아이 정보를 먼저 등록해 주세요. 홈에서 다시 시작할 수 있어요." };
   }
 
-  const question = await getThisWeekQuestion(child);
-  if (!question) {
+  // 이번 주 카드의 질문 = 이미 쓴 기록이 있으면 그 기록의 질문 행, 없으면 지금 시기의 추천 질문 행 (D-039).
+  const thisWeekStart = weekStartOf(todayKst());
+  const supabase = await createClient();
+  let existing: Awaited<ReturnType<typeof findWeekEntry>>;
+  try {
+    existing = await findWeekEntry(supabase, user.id, child.id, thisWeekStart);
+  } catch {
+    return { ok: false, error: SAVE_FAILED };
+  }
+  const recommended = existing ? null : await getThisWeekQuestion(child);
+  const target = existing?.question ?? recommended;
+  if (!target) {
     return { ok: false, error: "이번 주 질문이 아직 준비되지 않았어요." };
   }
-  if (question.id !== input.weeklyQuestionId) {
+  if (target.id !== input.weeklyQuestionId) {
     return {
       ok: false,
       error: "새로운 주가 시작됐어요. 화면을 새로고침한 뒤 새 질문에 적어 주세요.",
     };
   }
 
-  return saveEntryForQuestion(user.id, child.id, question.id, parsed.value);
+  return saveEntryForQuestion(user.id, child.id, { id: target.id, weekStart: thisWeekStart }, parsed.value);
 }
 
 /**
@@ -182,7 +187,7 @@ export async function savePastEntry(input: {
     return { ok: false, error: "이 질문에는 지금 기록을 남길 수 없어요." };
   }
 
-  return saveEntryForQuestion(user.id, child.id, question.id, parsed.value);
+  return saveEntryForQuestion(user.id, child.id, { id: question.id, weekStart: question.week_start }, parsed.value);
 }
 
 /** 기존 기록의 본문 수정 (상세 화면). 지난 기록의 오타 수정처럼 이번 주가 아니어도 허용한다. */

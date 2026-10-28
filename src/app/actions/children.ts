@@ -2,13 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser, safeNextPath } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import {
   validateChildInput,
   type ChildFieldErrors,
 } from "@/lib/child-validation";
 import { todayKst } from "@/lib/date";
-import { saveEmailConsent } from "@/lib/email-consent";
 import { createClient } from "@/lib/supabase/server";
 
 // 자녀 폼 상태. 오류가 나도 입력한 값을 돌려줘 폼이 비워지지 않게 한다.
@@ -18,6 +17,8 @@ export type ChildFormState = {
   error?: string;
 };
 
+const REGISTER_FAILED = "등록하지 못했어요. 입력한 내용은 그대로 있어요. 잠시 후 다시 눌러 주세요.";
+
 function readValues(formData: FormData) {
   return {
     nickname: String(formData.get("nickname") ?? ""),
@@ -25,18 +26,20 @@ function readValues(formData: FormData) {
   };
 }
 
-// 첫 자녀 등록 (온보딩). MVP는 부모당 자녀 1명이라 이미 있으면 새로 만들지 않는다 (D-013: 제한은 앱 로직).
-// 소유자(user_id)는 폼 값이 아니라 서버가 확인한 로그인 사용자로 정한다.
-export async function createChild(
-  _prev: ChildFormState,
-  formData: FormData,
-): Promise<ChildFormState> {
-  const user = await requireUser();
-  const next = safeNextPath(formData.get("next"));
-  const values = readValues(formData);
+// 첫 자녀 등록 (환영 온보딩의 두 번째 창). MVP는 부모당 자녀 1명이라 이미 있으면 새로 만들지 않는다 (D-013: 제한은 앱 로직).
+// 소유자(user_id)는 입력 값이 아니라 서버가 확인한 로그인 사용자로 정한다. 검증은 프로필 수정과 같은 `validateChildInput`이다.
+// 멱등: 중복 클릭·재시도·새로고침으로 같은 요청이 또 와도 아이는 하나만 있고, 이미 등록된 경우 기존 정보를 덮어쓰지 않고 성공으로 돌려준다.
+export type RegisterChildResult =
+  | { ok: true }
+  | { ok: false; fieldErrors?: ChildFieldErrors; error?: string };
 
-  const parsed = validateChildInput(values, todayKst());
-  if (!parsed.ok) return { values, fieldErrors: parsed.fieldErrors };
+export async function registerChild(input: {
+  nickname: string;
+  birthDate: string;
+}): Promise<RegisterChildResult> {
+  const user = await requireUser();
+  const parsed = validateChildInput(input, todayKst());
+  if (!parsed.ok) return { ok: false, fieldErrors: parsed.fieldErrors };
 
   const supabase = await createClient();
   const { count, error: countError } = await supabase
@@ -45,10 +48,10 @@ export async function createChild(
     .eq("user_id", user.id);
   if (countError) {
     console.error("[children] 자녀 수 확인 실패", countError.code);
-    return { values, error: "저장하지 못했어요. 잠시 후 다시 시도해 주세요." };
+    return { ok: false, error: REGISTER_FAILED };
   }
 
-  // 이미 등록돼 있으면(다른 탭·이중 제출) 만들지 않고 계속 진행한다. 동시 요청은 DB 유니크 인덱스가 막는다.
+  // 이미 등록돼 있으면(다른 탭·이중 제출·새로고침 뒤 재시도) 만들지 않고 성공으로 본다. 동시 요청은 DB 유니크 인덱스가 막는다.
   if (!count) {
     const { error } = await supabase.from("children").insert({
       user_id: user.id,
@@ -58,18 +61,13 @@ export async function createChild(
     // 23505: 동시 요청이 먼저 등록했다 (DB의 부모당 1명 제한). 이미 등록된 것이므로 성공으로 본다.
     if (error && error.code !== "23505") {
       console.error("[children] 자녀 등록 실패", error.code);
-      return { values, error: "저장하지 못했어요. 잠시 후 다시 시도해 주세요." };
+      return { ok: false, error: REGISTER_FAILED };
     }
   }
 
-  // 주간 이메일 수신은 온보딩의 선택 항목(체크하지 않으면 받지 않음). 실패해도 등록은 막지 않고,
-  // 부모가 프로필에서 다시 켤 수 있다.
-  if (formData.get("emailConsent") === "on") {
-    await saveEmailConsent(supabase, user.id, true);
-  }
-
-  revalidatePath("/", "layout");
-  redirect(next);
+  // 화면 갱신(revalidatePath)은 일부러 하지 않는다: 지금 열려 있는 환영 창이 다음 창으로 이어지는 도중에
+  // 서버 화면이 바뀌어 창이 다시 만들어지지 않게 한다. 온보딩이 끝날 때 화면이 한 번 새로 읽는다.
+  return { ok: true };
 }
 
 // 자녀 정보 수정 (프로필). 수정 대상은 폼의 id가 아니라 로그인한 부모의 자녀로 서버가 정한다.

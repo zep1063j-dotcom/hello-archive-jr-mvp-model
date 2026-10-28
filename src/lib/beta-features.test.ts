@@ -40,7 +40,7 @@ describe("지난 질문 쓰기 규칙", () => {
     ];
     const missed = missedQuestions({
       questions,
-      answeredQuestionIds: new Set(["a"]),
+      answeredWeekStarts: new Set(["2026-10-26"]),
       thisWeekStart: "2026-11-09",
       joinedWeekStart: "2026-10-26",
     });
@@ -50,10 +50,25 @@ describe("지난 질문 쓰기 규칙", () => {
     );
   });
 
+  it("다른 시기의 질문 행에 매달린 기록이어도 그 주는 답한 주다 (D-038, D-039)", () => {
+    // 같은 주에 시기별 질문 행이 둘: 지금 아이 시기의 행(child)과 예전에 기록이 매달린 행(early)
+    const questions = [
+      { id: "child-1102", weekStart: "2026-11-02" },
+      { id: "child-1026", weekStart: "2026-10-26" },
+    ];
+    const missed = missedQuestions({
+      questions,
+      answeredWeekStarts: new Set(["2026-11-02"]),
+      thisWeekStart: "2026-11-09",
+      joinedWeekStart: "2026-10-26",
+    });
+    assert.deepEqual(missed.map((q) => q.id), ["child-1026"]);
+  });
+
   it("가입 주에는 놓친 질문이 없다", () => {
     const missed = missedQuestions({
       questions: [{ id: "a", weekStart: "2026-10-19" }],
-      answeredQuestionIds: new Set(),
+      answeredWeekStarts: new Set(),
       thisWeekStart: "2026-10-26",
       joinedWeekStart: "2026-10-26",
     });

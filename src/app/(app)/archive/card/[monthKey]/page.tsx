@@ -25,7 +25,7 @@ async function MonthCardContent({
 }: {
   params: PageProps<"/archive/card/[monthKey]">["params"];
 }) {
-  const child = await requireChild("/archive");
+  const child = await requireChild();
   const { monthKey } = await params;
   const range = parseChapterKey("1m", monthKey);
   const today = todayKst();
@@ -58,7 +58,11 @@ async function MonthCardContent({
         </p>
       </header>
       {model ? (
-        <MonthCard model={model} fileBase={`hello-archive-${chapter.key}`} />
+        <MonthCard
+          model={model}
+          fileBase={`hello-archive-${chapter.key}`}
+          fullHref={`/archive/chapters/1m/${chapter.key}`}
+        />
       ) : (
         <EmptyState
           title="이 달에는 기록이 없어요"

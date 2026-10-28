@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { EntryDetailBody } from "@/components/entry-detail-body";
 import { Eyebrow, PageSkeleton } from "@/components/states";
+import { requireUser } from "@/lib/auth";
 import { requireChild } from "@/lib/children";
 import { formatKoreanDate, formatWeekLabel } from "@/lib/date";
 import { getMyEntry } from "@/lib/my-entries";
@@ -20,7 +21,8 @@ async function EntryDetail({
 }: {
   params: PageProps<"/archive/[entryId]">["params"];
 }) {
-  await requireChild("/archive");
+  const user = await requireUser();
+  await requireChild();
   const { entryId } = await params;
   // 내 기록이 아니거나 없는 id는 구분 없이 404 (타인 기록의 존재 여부를 알려주지 않는다).
   const entry = await getMyEntry(entryId);
@@ -44,7 +46,7 @@ async function EntryDetail({
             {entry.question.body}
           </h1>
         </header>
-        <EntryDetailBody entryId={entry.id} body={entry.body} photos={entry.photos} />
+        <EntryDetailBody entryId={entry.id} userId={user.id} body={entry.body} photos={entry.photos} />
         <footer className="mt-10 border-t border-line pt-4 text-xs leading-relaxed text-ink-mute">
           <p>
             작성{" "}

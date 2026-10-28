@@ -109,10 +109,11 @@ Vercel 예정. 아래는 순서이며 각 항목은 실행 후 결과를 SESSION
 5. `supabase/apply/3_question_change_after_entry.sql` (= 마이그레이션 `20261027000000`: 기록을 쓴 뒤에도 질문 바꾸기 허용, D-034). 정책을 지웠다 다시 만들어 여러 번 실행해도 안전하다. **이 파일을 정식 DB에 적용한 뒤에 앱을 배포(push)한다.**
 6. `supabase/apply/4_product_interests.sql` (= 마이그레이션 `20261028000000`: 제작 탭 관심 표시 테이블, D-036). 여러 번 실행해도 안전하다. **개발 DB로 `npm run test:interests`를 확인한 뒤 정식 DB에 적용하고, 그 다음에 앱을 배포(push)한다.** (적용 전에도 제작 화면은 열리지만 "받아보고 싶어요" 저장은 실패한다.)
 7. `supabase/apply/5_question_stages.sql` (= 마이그레이션 `20261028000100` + 질문 은행 시드 + 주간 질문 시드: 시기별 질문, D-038). 한 파일을 통째로 SQL Editor에 붙여 실행한다(여러 번 실행해도 안전). **개발 DB에서 `npm run test:choices`·`test:weekly-email`을 확인한 뒤 정식 DB에 적용하고, 그 다음에 앱을 배포(push)한다.** 순서를 어기면 홈이 이번 주 질문을 찾지 못해 "질문을 준비하고 있어요"가 뜬다. 적용 뒤에도 이미 기록이 있는 주의 질문 문구는 옛 것으로 남는다.
+8. `supabase/apply/6_onboarding.sql` (= 마이그레이션 `20261029000000`: 첫 가입 환영 온보딩 완료 상태 `parent_settings.onboarding_completed_at`, D-040). 이미 아이를 등록한 부모는 완료로 채워져 새 온보딩이 뜨지 않는다. 여러 번 실행해도 안전하다. **적용한 뒤에 앱을 배포(push)한다**(적용 전 배포해도 기존 사용자는 괜찮지만 신규 가입자는 마지막 환영 창이 로그인할 때마다 다시 뜬다). 이 앱 코드는 적용 전 DB에서도 멈추지 않는다(컬럼이 없으면 "아이가 있으면 완료"로 본다).
 적용 뒤 개발 DB에서 `npm run test:choices`, `npm run test:yearly`, `npm run test:photos`를 실행한다(새 마이그레이션이 없으면 실패한다). 정식 DB에는 테스트를 돌리지 않는다.
 
 ## 베타 지표 조회 (SESSION 09, D-023)
-정식 Supabase 대시보드 > SQL Editor에서 `supabase/analytics/beta_metrics.sql`의 쿼리 4개를 **하나씩** 복사해 실행한다(여러 문장을 동시에 실행하면 마지막 결과만 보인다). 먼저 각 쿼리 맨 위 `excluded` 배열에 운영자·시험 계정 user_id를 넣는다. 본문·이메일은 조회하지 않는다. 지표 정의와 판단 기준은 `BETA.md`.
+정식 Supabase 대시보드 > SQL Editor에서 `supabase/analytics/beta_metrics.sql`의 쿼리 5개를 **하나씩** 복사해 실행한다(여러 문장을 동시에 실행하면 마지막 결과만 보인다). 먼저 각 쿼리 맨 위 `excluded` 배열에 운영자·시험 계정 user_id를 넣는다. 본문·이메일은 조회하지 않는다. 지표 정의와 판단 기준은 `BETA.md`.
 
 ## 브라우저 미리보기 (Claude Code 데스크톱)
 `.claude/launch.json`의 `dev`(npm run dev, 포트 3000) 또는 `prod-3100`(npm run start -p 3100, 먼저 `npm run build`)으로 미리보기를 시작할 수 있다. 다른 채팅의 dev 서버가 3000 포트를 쓰고 있으면 `prod-3100`을 쓴다.

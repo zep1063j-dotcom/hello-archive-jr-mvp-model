@@ -23,6 +23,9 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
           <h1 className="mt-4 font-serif text-3xl font-bold leading-snug">
             이메일로 시작해요
           </h1>
+          <p className="mt-3 leading-relaxed text-ink-soft">
+            매주 질문 하나로 아이의 말과 일상을 남겨요.
+          </p>
         </div>
         <Suspense fallback={<PageSkeleton rows={1} />}>
           <LoginFormLoader searchParams={searchParams} />

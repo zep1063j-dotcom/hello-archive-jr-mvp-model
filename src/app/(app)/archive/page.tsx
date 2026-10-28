@@ -34,7 +34,7 @@ async function ArchiveContent({
 }) {
   const { q } = await searchParams;
   const search = normalizeSearchQuery(q);
-  const child = await requireChild("/archive");
+  const child = await requireChild();
   const entries = await getMyEntries(child.id, search);
 
   // 검색 중에는 검색 결과만 보이도록 카드 목록을 숨긴다(검색된 기록만으로는 한 달 카드를 만들 수 없다).
@@ -82,18 +82,18 @@ async function ArchiveContent({
           placeholder="기록에서 단어 찾기"
           enterKeyHint="search"
           autoComplete="off"
-          className="min-h-12 min-w-0 flex-1 border border-ink/40 bg-paper px-4 focus:border-ink"
+          className="min-h-12 min-w-0 flex-1 border border-ink/40 bg-paper px-4 focus:border-ink rounded-xl"
         />
         <button
           type="submit"
-          className="min-h-12 shrink-0 border border-ink px-5 font-semibold hover:bg-ink hover:text-paper"
+          className="min-h-12 shrink-0 border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-xl"
         >
           찾기
         </button>
       </form>
 
       <nav aria-label="기간별 모아보기">
-        <ul className="grid grid-cols-3 border border-ink">
+        <ul className="grid grid-cols-3 overflow-hidden rounded-2xl border border-ink">
           {PERIODS.map((period) => (
             <li key={period} className="border-l border-ink first:border-l-0">
               <Link
@@ -116,7 +116,7 @@ async function ArchiveContent({
       <Link
         href="/yearly"
         transitionTypes={["nav-forward"]}
-        className="flex min-h-14 items-center justify-between gap-3 border border-ink/30 px-4 hover:border-ink hover:bg-blush"
+        className="flex min-h-14 items-center justify-between gap-3 border border-ink/30 px-4 hover:border-ink hover:bg-blush rounded-xl"
       >
         <span>
           <span className="block font-serif font-bold">매년 같은 질문</span>

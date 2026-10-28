@@ -9,9 +9,11 @@ import { pickRandomBankQuestion, validateCustomQuestion } from "@/lib/question-c
 import { getMyChoices } from "@/lib/question-choices";
 import { todayKst, weekStartOf } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
+import { findWeekEntry } from "@/lib/week-entry";
 
 // 이번 주 질문 바꾸기: 은행에서 무작위로 바꾸기 / 직접 쓴 질문으로 바꾸기 / 기본 질문으로 되돌리기 (D-025).
-// 대상은 폼이 보낸 값이 아니라 서버가 정한 "오늘(KST)이 속한 주의 질문"이다. 기록을 남긴 뒤에도 바꿀 수 있다(D-034):
+// 대상은 폼이 보낸 값이 아니라 서버가 정한 "오늘(KST)이 속한 주의 질문 행"이다. 이미 이번 주 기록이 있으면 그 기록이 매달린 질문 행이고,
+// 없으면 지금 아이 시기의 질문 행이다 (D-039). 기록을 남긴 뒤에도 바꿀 수 있지만(D-034) 화면은 기록 수정 흐름 안에서만 연다:
 // 이미 쓴 답은 바뀐 질문 아래에 보인다. 소유권은 RLS(본인 선택만)와 `user_id` 조건 양쪽으로 확인한다.
 
 export type ChoiceActionResult =
@@ -38,6 +40,16 @@ async function loadEditableWeek(): Promise<{ ok: true; ctx: WeekContext } | { ok
 
   const weekStart = weekStartOf(todayKst());
   const stage = stageAt(child.birthDate, weekStart);
+
+  // 이번 주 기록이 이미 있으면 그 기록의 질문 행을 바꾼다 (지금 시기의 행에 선택을 만들면 기록의 질문과 어긋난다).
+  let saved: Awaited<ReturnType<typeof findWeekEntry>>;
+  try {
+    saved = await findWeekEntry(supabase, user.id, child.id, weekStart);
+  } catch {
+    return { ok: false, error: FAILED };
+  }
+  if (saved) return { ok: true, ctx: { userId: user.id, supabase, week: saved.question, stage } };
+
   const { data: week, error } = await supabase
     .from("weekly_questions")
     .select("id, body")

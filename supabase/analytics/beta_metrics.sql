@@ -9,7 +9,7 @@
 --   결과를 외부 분석 도구·채팅에 붙여 넣을 때도 이 숫자만 쓴다.
 --
 -- 제외할 계정(운영자 본인·시험 계정): 쿼리마다 맨 위 `excluded`의 배열에 user_id를 넣는다.
---   user_id는 Authentication > Users에서 복사한다. (쿼리 4개 모두 같은 자리)
+--   user_id는 Authentication > Users에서 복사한다. (쿼리 5개 모두 같은 자리)
 --
 -- 주 단위는 한국 시간(Asia/Seoul) 월요일 시작이며 weekly_questions.week_start와 같다.
 -- 지난 질문 쓰기(D-024) 때문에 "그 주 질문에 대한 기록"이 그 주가 지난 뒤에 만들어질 수 있다.
@@ -195,3 +195,49 @@ select
   (select count(*) from per_parent) as wrote_once,
   (select count(*) from per_parent where weeks_written >= 2) as wrote_2plus_weeks,
   (select count(*) from public.entries e where e.user_id not in (select user_id from excluded)) as total_entries;
+
+-- ===========================================================================
+-- 쿼리 5. 5명·4주 베타 운영표: 가입 주 기준 1~4주차의 기록 인원과 기록 횟수 (D-043)
+--   week_no          : 1 = 아이를 등록한 주, 2 = 그다음 주 … 4 = 4주차 (주는 한국 시간 월요일 시작)
+--   eligible_parents : 그 주차가 이미 시작된 부모 수 (분모). 아직 오지 않은 주차의 0명을 "기록 안 함"으로 읽지 않기 위해
+--   writers          : 그 주차에 (그 주 안에) 기록한 부모 수 (분자)
+--   entries          : 그 주차에 쓴 기록 횟수 (지난 질문을 나중에 채운 기록은 제외)
+-- 4주차 기록 인원 = week_no 4의 writers / eligible_parents. 첫 기록 완료 인원은 쿼리 4의 wrote_once.
+-- 기록 본문·이메일·아이 이름/생년월일·사진은 조회하지 않는다. 부모는 구분하지 않고 인원·횟수만 센다.
+-- ===========================================================================
+with
+excluded(user_id) as (
+  select unnest(array[]::uuid[])
+),
+cur as (
+  select date_trunc('week', now() at time zone 'Asia/Seoul')::date as week_start
+),
+parents as (
+  select c.user_id,
+         date_trunc('week', min(c.created_at) at time zone 'Asia/Seoul')::date as join_week
+  from public.children c
+  where c.user_id not in (select user_id from excluded)
+  group by c.user_id
+),
+writes as (
+  select e.user_id, q.week_start, count(*) as entries
+  from public.entries e
+  join public.weekly_questions q on q.id = e.weekly_question_id
+  where e.user_id not in (select user_id from excluded)
+    -- 그 주 안에 쓴 기록만
+    and e.created_at < (q.week_start + 7)::timestamp at time zone 'Asia/Seoul'
+  group by e.user_id, q.week_start
+),
+rel as (
+  select w.user_id, ((w.week_start - p.join_week) / 7) + 1 as week_no, w.entries
+  from writes w
+  join parents p on p.user_id = w.user_id
+  where w.week_start >= p.join_week
+)
+select
+  s.n as week_no,
+  (select count(*) from parents p cross join cur where p.join_week + (s.n - 1) * 7 <= cur.week_start) as eligible_parents,
+  (select count(distinct r.user_id) from rel r where r.week_no = s.n) as writers,
+  (select coalesce(sum(r.entries), 0) from rel r where r.week_no = s.n) as entries
+from generate_series(1, 4) as s(n)
+order by s.n;

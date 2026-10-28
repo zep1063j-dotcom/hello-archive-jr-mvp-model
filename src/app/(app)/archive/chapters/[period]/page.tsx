@@ -27,7 +27,7 @@ async function ChapterList({
 }: {
   params: PageProps<"/archive/chapters/[period]">["params"];
 }) {
-  const child = await requireChild("/archive");
+  const child = await requireChild();
   const { period } = await params;
   if (!isChapterPeriod(period)) notFound();
 

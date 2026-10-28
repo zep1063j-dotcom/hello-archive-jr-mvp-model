@@ -13,6 +13,8 @@ export type LoginState = {
   error?: string;
   /** 코드를 다시 보냈을 때 알림용 */
   notice?: string;
+  /** 코드를 보낸 시각(ms). 화면이 "다시 받기" 대기 시간을 세는 데 쓴다 */
+  sentAt?: number;
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -27,6 +29,11 @@ async function clearCodeVerifierCookies() {
     .getAll()
     .filter(({ name }) => name.endsWith("code-verifier"))
     .forEach(({ name }) => cookieStore.delete(name));
+}
+
+function readSentAt(formData: FormData): number | undefined {
+  const value = Number(formData.get("sentAt"));
+  return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
 function readEmail(formData: FormData) {
@@ -71,7 +78,7 @@ async function requestLoginCode(
     };
   }
 
-  return { step: "code", email, next };
+  return { step: "code", email, next, sentAt: Date.now() };
 }
 
 // 메일의 숫자 코드를 확인해 세션 쿠키를 만들고, 안전하게 검증한 경로로 보낸다.
@@ -87,7 +94,7 @@ async function verifyLoginCode(
     return { step: "email", email: "", next, error: "처음부터 다시 시도해 주세요." };
   }
   if (!CODE_PATTERN.test(token)) {
-    return { step: "code", email, next, error: "메일로 받은 숫자 코드를 입력해 주세요." };
+    return { step: "code", email, next, sentAt: readSentAt(formData), error: "메일로 받은 숫자 코드를 입력해 주세요." };
   }
 
   const supabase = await createClient();
@@ -103,6 +110,7 @@ async function verifyLoginCode(
       step: "code",
       email,
       next,
+      sentAt: readSentAt(formData),
       error: "코드가 맞지 않거나 만료됐어요. 새 코드를 받아 다시 입력해 주세요.",
     };
   }
@@ -130,8 +138,8 @@ async function resendLoginCode(
   if (result.step === "code") {
     return { ...result, notice: "새 코드를 보냈어요. 가장 최근에 받은 메일의 코드를 입력해 주세요." };
   }
-  // 실패하면 코드 입력 단계를 유지한 채 오류만 보여준다.
-  return { ...result, step: "code" };
+  // 실패하면 코드 입력 단계를 유지한 채 오류만 보여준다(대기 시간은 이전 발송 시각 그대로).
+  return { ...result, step: "code", sentAt: readSentAt(formData) };
 }
 
 // 로그인 폼의 단일 진입점. intent로 단계를 나눈다: send(코드 받기) / verify(코드 확인) / resend(다시 받기) / change(이메일 바꾸기)

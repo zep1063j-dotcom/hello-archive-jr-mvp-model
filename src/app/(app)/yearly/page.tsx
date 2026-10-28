@@ -19,7 +19,7 @@ export default function YearlyPage() {
 }
 
 async function YearlyContent() {
-  const child = await requireChild("/yearly");
+  const child = await requireChild();
   const rows = await getMyYearlyAnswers(child.id);
   const today = todayKst();
   const year = yearOfDateKey(today);
@@ -47,7 +47,7 @@ async function YearlyContent() {
           해마다 같은 질문에 답해 두면, 1년 전의 모습과 지금의 모습을 나란히 볼 수 있어요. 한 해에 한 번이면 충분해요.
         </p>
         {isBirthMonth ? (
-          <p className="mt-3 border-l-4 border-brand bg-blush px-4 py-3 text-sm">
+          <p className="mt-3 border-l-4 border-brand bg-blush px-4 py-3 text-sm rounded-r-xl">
             <span className="break-all">{child.nickname}</span>의 생일 달이에요. 오늘 답해 두기 좋은 때예요.
           </p>
         ) : (

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { requireUser } from "@/lib/auth";
 import { applyChoice, type QuestionChoiceLike } from "@/lib/question-choice-rules";
 import { createClient } from "@/lib/supabase/server";
@@ -13,7 +14,7 @@ export type QuestionChoice = QuestionChoiceLike & { weeklyQuestionId: string };
 const MISSING_TABLE_CODES = new Set(["42P01", "PGRST205"]);
 
 /** 내 선택 전체를 주 질문 id → 선택으로. */
-export async function getMyChoices(): Promise<Map<string, QuestionChoice>> {
+export const getMyChoices = cache(async (): Promise<Map<string, QuestionChoice>> => {
   const user = await requireUser();
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -34,7 +35,7 @@ export async function getMyChoices(): Promise<Map<string, QuestionChoice>> {
       { weeklyQuestionId: row.weekly_question_id, source: row.source, body: row.body },
     ]),
   );
-}
+});
 
 /** 질문에 내 선택을 입힌다. 선택 목록을 이미 읽었으면 넘겨 한 번 더 조회하지 않는다. */
 export async function withMyChoice(

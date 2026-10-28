@@ -47,7 +47,7 @@ async function UnsubscribeContent({
         이제 주간 질문 메일을 보내지 않아요. 다시 받고 싶으면 로그인한 뒤 프로필에서 언제든 켤 수 있어요.
         <Link
           href="/login"
-          className="mt-6 flex min-h-12 w-full items-center justify-between border border-ink px-5 font-semibold hover:bg-ink hover:text-paper"
+          className="mt-6 flex min-h-12 w-full items-center justify-between border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-xl"
         >
           앱으로 가기 <span aria-hidden>↗</span>
         </Link>
@@ -79,7 +79,7 @@ async function UnsubscribeContent({
         <input type="hidden" name="t" value={token} />
         <button
           type="submit"
-          className="flex min-h-12 w-full items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-deep"
+          className="flex min-h-12 w-full items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-deep rounded-xl"
         >
           수신 거부하기 <span aria-hidden>↗</span>
         </button>

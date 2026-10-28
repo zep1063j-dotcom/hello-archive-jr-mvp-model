@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* 브랜드: 블랙 + 레드(포인트). 큰 면적은 종이·살구빛 같은 부드러운 색으로 두고 검정은 글씨와 가는 선에만 쓴다. 종이 위에 쓰는 기록장 느낌 — 둥근 카드 대신 가는 선과 세리프 글씨로 구분한다. */
+/* 브랜드: 블랙 + 레드(포인트). 큰 면적은 종이·살구빛 같은 부드러운 색으로 두고 검정은 글씨와 가는 선에만 쓴다. 종이 위에 쓰는 기록장 느낌에 둥근 모서리를 더해 딱딱함을 덜었다 — 구분은 가는 선·세리프 글씨와 큰 곡률로 한다. */
 :root {
   --paper: #f7f3eb;
   --paper-deep: #ece5d6;
@@ -35,6 +35,15 @@
     Batang, serif;
 }
 
+/* 모서리를 부드럽게: 버튼·입력칸·카드는 둥근 모서리를 쓴다(클래스로 지정). 아직 지정하지 않은 입력 요소의 기본값도 같은 둥근 모서리로 맞춘다. */
+@layer base {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  textarea,
+  select {
+    border-radius: 0.75rem;
+  }
+}
+
 body {
   background: var(--paper);
   color: var(--ink);
@@ -50,6 +59,105 @@ body {
 :focus-visible {
   outline: 2px solid var(--brand-red);
   outline-offset: 2px;
+}
+
+/* ---- 환영 온보딩 창 (D-040) ---- */
+/* 가운데 작은 창이 아래에서 살짝 올라오며 나타나고, 단계가 바뀌면 같은 창의 크기와 내용이 부드럽게 바뀐다. 전환은 300ms 안팎. */
+.onboarding-dialog {
+  --ob-width: min(22rem, calc(100vw - 2rem));
+  width: var(--ob-width);
+  max-width: none;
+  max-height: none;
+  /* Tailwind의 초기화가 dialog의 기본 가운데 정렬(margin: auto)을 지우므로 다시 지정한다 */
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  overflow: visible;
+  transition: width 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.onboarding-dialog[data-wide] {
+  --ob-width: min(26rem, calc(100vw - 2rem));
+}
+.onboarding-dialog::backdrop {
+  background: rgb(17 17 17 / 0.42);
+  backdrop-filter: blur(4px);
+  animation: ob-fade-in 300ms ease-out both;
+}
+.onboarding-panel {
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 1.5rem;
+  background: var(--sheet);
+  box-shadow: 0 18px 50px rgb(17 17 17 / 0.22);
+  transition: height 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.onboarding-dialog[open] .onboarding-panel {
+  animation: ob-rise 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+/* 단계가 바뀔 때 포커스가 가는 제목은 키보드 이동 대상이 아니라서 포커스 테두리를 그리지 않는다 */
+.onboarding-dialog [tabindex="-1"]:focus-visible {
+  outline: none;
+}
+.onboarding-content {
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+.onboarding-content[data-phase="out"] {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.onboarding-content[data-phase="in"] {
+  animation: ob-content-in 220ms ease-out both;
+}
+.onboarding-dialog[data-closing] .onboarding-panel {
+  animation: ob-sink 260ms ease-in both;
+}
+.onboarding-dialog[data-closing]::backdrop {
+  animation: ob-fade-out 260ms ease-in both;
+}
+@keyframes ob-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ob-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes ob-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+@keyframes ob-sink {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+}
+@keyframes ob-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+/* 움직임을 줄이도록 설정한 사용자는 이동·크기 전환 없이 바로 바뀐다 */
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-dialog,
+  .onboarding-dialog::backdrop,
+  .onboarding-panel,
+  .onboarding-content {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
 }
 
 /* ---- 화면 전환 (View Transitions) ---- */

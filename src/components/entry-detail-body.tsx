@@ -8,6 +8,8 @@ import {
 } from "@/app/actions/entries";
 import { canSubmitBody, EntryBodyField } from "@/components/entry-body-field";
 import { EntryPhotoField, PhotoGallery, useEntryPhotos } from "@/components/entry-photo-field";
+import { useStoredDraft } from "@/components/use-draft";
+import { draftKey, removeDraft, writeDraft } from "@/lib/draft-store";
 import type { EntryPhoto } from "@/types/archive";
 
 type Mode = "view" | "edit" | "confirm-delete";
@@ -15,21 +17,32 @@ type Mode = "view" | "edit" | "confirm-delete";
 const SAVE_ERROR = "저장하지 못했어요. 쓴 내용은 그대로 있어요. 잠시 후 다시 눌러 주세요.";
 
 const secondaryButton =
-  "min-h-12 border border-ink/30 px-5 text-sm hover:border-ink hover:bg-sheet disabled:cursor-not-allowed disabled:opacity-40";
+  "min-h-12 border border-ink/30 px-5 text-sm hover:border-ink hover:bg-sheet disabled:cursor-not-allowed disabled:opacity-40 rounded-xl";
 
 // 기록 상세의 본문 + 수정·삭제. 삭제는 되돌릴 수 없어 한 번 더 확인한다.
-// 수정은 이번 주가 아닌 지난 기록에도 허용한다(오타 수정 등, 본문만 바뀐다).
+// 수정은 이번 주가 아닌 지난 기록에도 허용한다(오타 수정 등, 본문만 바뀐다). 질문은 여기서 바뀌지 않는다 (D-039).
+// 고치는 중인 글은 이 기기에 계정별 초안으로 남고, 취소하면 저장된 원본이 그대로 남는다 (D-041).
 export function EntryDetailBody({
   entryId,
+  userId,
   body,
   photos: savedPhotos,
 }: {
   entryId: string;
+  userId: string;
   body: string;
   photos: EntryPhoto[];
 }) {
   const [mode, setMode] = useState<Mode>("view");
-  const [draft, setDraft] = useState(body);
+  const key = draftKey(userId, `edit:${entryId}`);
+  const stored = useStoredDraft(key);
+  const [typed, setTyped] = useState<string | null>(null);
+  const draft = typed ?? stored ?? body;
+  function setDraft(next: string) {
+    setTyped(next);
+    if (next === body) removeDraft(key);
+    else writeDraft(key, next);
+  }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -65,6 +78,7 @@ export function EntryDetailBody({
         setError(result.error);
         return;
       }
+      removeDraft(key); // 글은 서버에 저장됐다
       if (photos.queued.length > 0) {
         const upload = await photos.uploadQueued(entryId);
         if (upload.failed > 0) {
@@ -74,6 +88,7 @@ export function EntryDetailBody({
         }
       }
       setSavedBody(draft.trim());
+      setTyped(null);
       photos.reset();
       setMode("view");
     } catch {
@@ -111,7 +126,7 @@ export function EntryDetailBody({
           <button
             type="submit"
             disabled={pending || !canSubmitBody(draft)}
-            className="flex min-h-12 flex-1 items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-brand"
+            className="flex min-h-12 flex-1 items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-brand rounded-xl"
           >
             {saving ? "저장하는 중…" : "수정 저장"}
             <span aria-hidden>↗</span>
@@ -120,6 +135,9 @@ export function EntryDetailBody({
             type="button"
             disabled={pending}
             onClick={() => {
+              // 고치던 내용을 버리고 저장된 원본을 그대로 둔다
+              setTyped(null);
+              removeDraft(key);
               setMode("view");
               setError(null);
             }}
@@ -145,7 +163,7 @@ export function EntryDetailBody({
           <div
             role="alertdialog"
             aria-label="기록 삭제 확인"
-            className="border-l-4 border-brand bg-sheet px-5 py-5"
+            className="border-l-4 border-brand bg-sheet px-5 py-5 rounded-r-xl"
           >
             <p className="font-serif text-lg font-semibold">이 기록을 삭제할까요?</p>
             <p className="mt-2 text-sm leading-relaxed text-ink-soft">
@@ -157,7 +175,7 @@ export function EntryDetailBody({
                 <button
                   type="submit"
                   disabled={pending}
-                  className="min-h-12 flex-1 bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-deep disabled:opacity-40"
+                  className="min-h-12 flex-1 bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-deep disabled:opacity-40 rounded-xl"
                 >
                   {deleting ? "삭제하는 중…" : "삭제하기"}
                 </button>
@@ -178,7 +196,6 @@ export function EntryDetailBody({
             <button
               type="button"
               onClick={() => {
-                setDraft(shownBody);
                 setError(null);
                 setMode("edit");
               }}

@@ -31,7 +31,7 @@ async function Chapter({
 }: {
   params: PageProps<"/archive/chapters/[period]/[chapterKey]">["params"];
 }) {
-  const child = await requireChild("/archive");
+  const child = await requireChild();
   const { period, chapterKey } = await params;
   if (!isChapterPeriod(period)) notFound();
   const range = parseChapterKey(period, chapterKey);
@@ -68,7 +68,7 @@ async function Chapter({
         <Link
           href={`/archive/card/${chapter.key}`}
           transitionTypes={["nav-forward"]}
-          className="-mt-3 flex min-h-14 items-center justify-between gap-3 bg-brand px-5 font-semibold text-white hover:bg-brand-deep"
+          className="-mt-3 flex min-h-14 items-center justify-between gap-3 bg-brand px-5 font-semibold text-white hover:bg-brand-deep rounded-xl"
         >
           <span>
             이야기 카드 만들기

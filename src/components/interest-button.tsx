@@ -18,7 +18,7 @@ export function InterestButton({ product, initial }: { product: ProductKey; init
         type="submit"
         disabled={pending}
         aria-pressed={state.interested}
-        className={`flex min-h-12 w-full items-center justify-between px-5 text-[15px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        className={`flex min-h-12 w-full items-center justify-between rounded-xl px-5 text-[15px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
           state.interested
             ? "border border-ink bg-paper text-ink hover:bg-blush"
             : "bg-brand text-white hover:bg-brand-deep"
@@ -33,7 +33,7 @@ export function InterestButton({ product, initial }: { product: ProductKey; init
         </p>
       )}
       {state.error && (
-        <p role="alert" className="border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
+        <p role="alert" className="border-l-4 border-brand bg-sheet px-4 py-3 text-sm rounded-r-xl">
           {state.error}
         </p>
       )}

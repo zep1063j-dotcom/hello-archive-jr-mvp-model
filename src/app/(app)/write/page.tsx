@@ -2,9 +2,11 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { WeekComposer } from "@/components/home/week-composer";
 import { EmptyState, PageSkeleton } from "@/components/states";
+import { requireUser } from "@/lib/auth";
 import { requireChild } from "@/lib/children";
 import { weekStartOf, todayKst } from "@/lib/date";
 import { getMyEntries, getPastQuestion, getThisWeekQuestion } from "@/lib/my-entries";
+import { entryOfWeek, questionForWeekCard } from "@/lib/week-question";
 
 export const metadata = { title: "기록 쓰기 · Hello Archive jr" };
 
@@ -26,7 +28,8 @@ async function WriteContent({
 }) {
   const { week } = await searchParams;
   const weekParam = Array.isArray(week) ? week[0] : week;
-  const child = await requireChild(weekParam ? `/write?week=${encodeURIComponent(weekParam)}` : "/write");
+  const user = await requireUser();
+  const child = await requireChild();
 
   if (weekParam) {
     const [pastQuestion, entries] = await Promise.all([
@@ -42,11 +45,21 @@ async function WriteContent({
         />
       );
     }
-    const existingPast = entries.find((entry) => entry.question.id === pastQuestion.id) ?? null;
+    // 같은 주에 다른 시기의 질문 행에 매달린 기록이 있으면 그 기록의 질문으로 보인다 (D-039).
+    const existingPast = entryOfWeek(entries, pastQuestion.weekStart);
+    const shownQuestion = questionForWeekCard(pastQuestion, existingPast) ?? pastQuestion;
     return (
       <>
         <h1 className="sr-only">지난 질문에 기록 쓰기</h1>
-        <WeekComposer key={pastQuestion.id} question={pastQuestion} entry={existingPast} defaultOpen past />
+        <WeekComposer
+          key={shownQuestion.id}
+          question={shownQuestion}
+          entry={existingPast}
+          userId={user.id}
+          firstRecord={entries.length === 0}
+          defaultOpen
+          past
+        />
         <Link
           href="/home"
           className="min-h-12 content-center text-sm text-ink-soft underline underline-offset-4 hover:text-brand"
@@ -62,7 +75,12 @@ async function WriteContent({
     getMyEntries(child.id),
   ]);
 
-  if (!question) {
+  const thisWeekStart = weekStartOf(todayKst());
+  const existing = entryOfWeek(entries, thisWeekStart);
+  // 이미 쓴 기록이 있으면 그 기록의 질문, 없으면 지금 시기의 추천 질문 (D-039).
+  const shownQuestion = questionForWeekCard(question, existing);
+
+  if (!shownQuestion) {
     return (
       <EmptyState
         title="이번 주 질문을 준비하고 있어요"
@@ -72,14 +90,17 @@ async function WriteContent({
     );
   }
 
-  const thisWeekStart = weekStartOf(todayKst());
-  const existing =
-    entries.find((entry) => entry.question.weekStart === thisWeekStart) ?? null;
-
   return (
     <>
       <h1 className="sr-only">이번 주 기록 쓰기</h1>
-      <WeekComposer key={question.id} question={question} entry={existing} defaultOpen />
+      <WeekComposer
+        key={shownQuestion.id}
+        question={shownQuestion}
+        entry={existing}
+        userId={user.id}
+        firstRecord={entries.length === 0}
+        defaultOpen
+      />
     </>
   );
 }

@@ -23,7 +23,7 @@ export function PrimaryLink({
   return (
     <Link
       href={href}
-      className="inline-flex min-h-12 w-full items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep md:w-auto md:min-w-56"
+      className="inline-flex min-h-12 w-full items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep md:w-auto md:min-w-56 rounded-xl"
     >
       {children}
       <span aria-hidden>↗</span>
@@ -41,7 +41,7 @@ export function EmptyState({
   action?: { href: string; label: string };
 }) {
   return (
-    <div className="border border-dashed border-ink-mute px-6 py-10">
+    <div className="border border-dashed border-ink-mute px-6 py-10 rounded-2xl">
       <p className="font-serif text-xl font-semibold leading-snug">{title}</p>
       <p className="mt-3 leading-relaxed text-ink-soft">{description}</p>
       {action && (
@@ -63,14 +63,14 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div role="alert" className="border-l-4 border-brand bg-sheet px-5 py-6">
+    <div role="alert" className="border-l-4 border-brand bg-sheet px-5 py-6 rounded-r-xl">
       <p className="font-serif text-xl font-semibold leading-snug">{title}</p>
       <p className="mt-3 leading-relaxed text-ink-soft">{description}</p>
       {onRetry && (
         <button
           type="button"
           onClick={onRetry}
-          className="mt-5 inline-flex min-h-12 items-center border border-ink px-5 font-semibold hover:bg-ink hover:text-paper"
+          className="mt-5 inline-flex min-h-12 items-center border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-xl"
         >
           다시 시도
         </button>
@@ -80,7 +80,7 @@ export function ErrorState({
 }
 
 function SkeletonBlock({ className }: { className: string }) {
-  return <div className={`animate-pulse bg-paper-deep ${className}`} />;
+  return <div className={`animate-pulse bg-paper-deep ${className} rounded-xl`} />;
 }
 
 export function PageSkeleton({ rows = 3 }: { rows?: number }) {

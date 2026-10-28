@@ -2,39 +2,30 @@
 
 import Link from "next/link";
 import { useActionState, useId } from "react";
-import {
-  createChild,
-  updateChild,
-  type ChildFormState,
-} from "@/app/actions/children";
+import { updateChild, type ChildFormState } from "@/app/actions/children";
 import { NICKNAME_MAX_LENGTH } from "@/lib/child-validation";
 
 const primaryButton =
-  "flex min-h-12 w-full items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:bg-ink-mute disabled:opacity-60";
+  "flex min-h-12 w-full items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:bg-ink-mute disabled:opacity-60 rounded-xl";
 const fieldClass =
-  "w-full border border-ink bg-sheet px-4 py-3 text-base outline-none placeholder:text-ink-mute focus:border-brand focus:ring-1 focus:ring-brand";
+  "w-full border border-ink bg-sheet px-4 py-3 text-base outline-none placeholder:text-ink-mute focus:border-brand focus:ring-1 focus:ring-brand rounded-xl";
 const labelClass =
   "text-[11px] font-semibold tracking-[0.14em] text-ink-soft uppercase";
 
-// 자녀 등록(온보딩)과 수정(프로필)이 함께 쓰는 폼. 검증은 서버 액션이 하고, 여기서는 보여주기만 한다.
-// 보내는 중에는 버튼을 막아 중복 제출을 방지한다.
+// 자녀 정보 수정(프로필) 폼. 첫 등록은 환영 온보딩 창(OnboardingDialog)이 한다 (D-040).
+// 검증은 서버 액션이 하고, 여기서는 보여주기만 한다. 보내는 중에는 버튼을 막아 중복 제출을 방지한다.
 export function ChildForm({
-  mode,
   initial,
-  next,
   min,
   max,
 }: {
-  mode: "create" | "update";
   initial: { nickname: string; birthDate: string };
-  /** create에서 등록 후 돌아갈 경로 */
-  next?: string;
   /** 생년월일 입력 범위 (YYYY-MM-DD). 서버가 다시 검증한다. */
   min: string;
   max: string;
 }) {
   const [state, formAction, pending] = useActionState<ChildFormState, FormData>(
-    mode === "create" ? createChild : updateChild,
+    updateChild,
     { values: initial },
   );
   const nicknameId = useId();
@@ -46,8 +37,6 @@ export function ChildForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-5" noValidate>
-      {mode === "create" && <input type="hidden" name="next" value={next ?? ""} />}
-
       <div className="flex flex-col gap-2">
         <label htmlFor={nicknameId} className={labelClass}>
           아이 별명
@@ -57,7 +46,6 @@ export function ChildForm({
           name="nickname"
           type="text"
           autoComplete="off"
-          autoFocus={mode === "create"}
           required
           maxLength={NICKNAME_MAX_LENGTH}
           defaultValue={state.values.nickname}
@@ -100,25 +88,9 @@ export function ChildForm({
         </p>
       </div>
 
-      {mode === "create" && (
-        <label className="flex items-start gap-3 leading-relaxed">
-          <input
-            type="checkbox"
-            name="emailConsent"
-            className="mt-1.5 size-5 shrink-0 accent-brand"
-          />
-          <span>
-            <span className="block font-semibold">매주 월요일 저녁, 이번 주 질문을 이메일로 받을래요</span>
-            <span className="block text-sm text-ink-soft">
-              선택 사항이에요. 언제든 프로필에서 끌 수 있어요.
-            </span>
-          </span>
-        </label>
-      )}
-
       <div id={formErrorId} aria-live="polite">
         {state.error && (
-          <p role="alert" className="border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
+          <p role="alert" className="border-l-4 border-brand bg-sheet px-4 py-3 text-sm rounded-r-xl">
             {state.error}
           </p>
         )}
@@ -126,21 +98,15 @@ export function ChildForm({
 
       <div className="flex flex-col gap-2">
         <button type="submit" disabled={pending} className={primaryButton}>
-          {pending
-            ? "저장하는 중…"
-            : mode === "create"
-              ? "시작하기"
-              : "저장하기"}
+          {pending ? "저장하는 중…" : "저장하기"}
           <span aria-hidden>↗</span>
         </button>
-        {mode === "update" && (
-          <Link
-            href="/profile"
-            className="flex min-h-12 items-center justify-center border border-line text-ink-soft hover:border-ink hover:text-ink"
-          >
-            취소
-          </Link>
-        )}
+        <Link
+          href="/profile"
+          className="flex min-h-12 items-center justify-center border border-line text-ink-soft hover:border-ink hover:text-ink rounded-xl"
+        >
+          취소
+        </Link>
       </div>
     </form>
   );

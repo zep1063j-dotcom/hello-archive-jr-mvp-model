@@ -24,7 +24,7 @@ export default function MakePage() {
       <Link
         href="/archive/chapters/1m"
         transitionTypes={["nav-forward"]}
-        className="flex min-h-16 items-center justify-between gap-3 border border-ink px-4 py-3 hover:bg-blush"
+        className="flex min-h-16 items-center justify-between gap-3 border border-ink px-4 py-3 hover:bg-blush rounded-xl"
       >
         <span>
           <span className="block font-serif text-lg font-bold">1개월 이야기 카드</span>
@@ -41,7 +41,7 @@ export default function MakePage() {
 }
 
 async function BookSection() {
-  const child = await requireChild("/make");
+  const child = await requireChild();
   const [preview, interests] = await Promise.all([getMyBookPreview(child.id), getMyInterests()]);
 
   return (
@@ -52,7 +52,7 @@ async function BookSection() {
         </h2>
         {preview ? (
           <>
-            <dl className="grid grid-cols-3 border border-ink text-center">
+            <dl className="grid grid-cols-3 overflow-hidden rounded-2xl border border-ink text-center">
               <Stat label="기록" value={`${preview.entryCount}개`} />
               <Stat label="사진" value={`${preview.photoCount}장`} />
               <Stat label="기록한 달" value={`${preview.monthCount}개월`} />
@@ -65,7 +65,7 @@ async function BookSection() {
             </p>
           </>
         ) : (
-          <p className="border border-dashed border-ink-mute px-5 py-6 leading-relaxed text-ink-soft">
+          <p className="border border-dashed border-ink-mute px-5 py-6 leading-relaxed text-ink-soft rounded-2xl">
             아직 담을 기록이 없어요. 이번 주 질문에 답하면 여기서 책 한 권 분량을 볼 수 있어요.
           </p>
         )}
@@ -81,7 +81,7 @@ async function BookSection() {
           </p>
         </div>
         {PRODUCTS.map((product) => (
-          <article key={product.key} className="flex flex-col gap-3 border border-ink/30 p-4">
+          <article key={product.key} className="flex flex-col gap-3 border border-ink/30 p-4 rounded-2xl">
             <div>
               <h3 className="font-serif text-lg font-bold">{product.name}</h3>
               <p className="text-[13px] text-ink-soft">{product.summary}</p>

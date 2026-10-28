@@ -47,7 +47,7 @@ export function EntryBodyField({
         aria-describedby={helpId}
         aria-invalid={tooLong}
         placeholder="떠오르는 대로 편하게 적어 주세요."
-        className={`w-full resize-y border bg-sheet p-4 font-serif text-base leading-[1.9] text-ink outline-none placeholder:text-ink-mute focus:border-brand focus:ring-1 focus:ring-brand ${BORDER_CLASS[tone]}`}
+        className={`w-full resize-y border bg-sheet p-4 font-serif text-base leading-[1.9] text-ink outline-none placeholder:text-ink-mute focus:border-brand focus:ring-1 focus:ring-brand ${BORDER_CLASS[tone]} rounded-xl`}
       />
       <div className="flex items-center justify-between gap-3 text-xs">
         <p aria-live="polite" className="min-h-4">

@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Child } from "@/types/archive";
@@ -9,7 +10,7 @@ import type { Child } from "@/types/archive";
  * 소유권은 RLS와 `user_id` 조건 양쪽으로 확인한다. 조회 실패는 오류로 던져 오류 화면이 받는다.
  * (쿠키를 읽으므로 Suspense 경계 안에서 호출해야 한다.)
  */
-export async function getMyChild(): Promise<Child | null> {
+export const getMyChild = cache(async (): Promise<Child | null> => {
   const user = await requireUser();
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -39,7 +40,7 @@ export async function getMyChild(): Promise<Child | null> {
         photoPath: data.photo_path,
       }
     : null;
-}
+});
 
 async function getMyChildWithoutPhoto(userId: string): Promise<Child | null> {
   const supabase = await createClient();
@@ -66,12 +67,12 @@ async function getMyChildWithoutPhoto(userId: string): Promise<Child | null> {
 }
 
 /**
- * 자녀가 등록돼 있어야 하는 화면에서 부른다. 없으면 온보딩으로 보내고, 등록 후 `next`로 돌아오게 한다.
+ * 자녀가 등록돼 있어야 하는 화면에서 부른다. 없으면 홈으로 보낸다: 첫 가입 환영 온보딩(D-040)이 홈 위의 창으로 뜬다.
  */
-export async function requireChild(next: string): Promise<Child> {
+export async function requireChild(): Promise<Child> {
   const child = await getMyChild();
   if (!child) {
-    redirect(`/onboarding?next=${encodeURIComponent(next)}`);
+    redirect("/home");
   }
   return child;
 }

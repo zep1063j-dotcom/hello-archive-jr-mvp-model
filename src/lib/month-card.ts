@@ -196,19 +196,33 @@ export const TIMELINE = {
   dotSize: 34,
   /** 질문·답 글자가 시작하는 x */
   textLeft: 232,
-  questionSize: 28,
-  questionLineHeight: 38,
-  answerSize: 32,
-  answerLineHeight: 46,
   /** 질문과 답 사이 */
   questionGap: 8,
   gapMin: 24,
   gapMax: 52,
   maxQuestionLines: 2,
-  maxAnswerLines: 4,
 } as const;
 
 export const TIMELINE_TEXT_WIDTH = CARD_WIDTH - TIMELINE.margin - TIMELINE.textLeft;
+
+/** 항목 수에 따른 글자 크기·줄 높이. 기록이 적으면 크게, 많으면 작게 (D-042). */
+export type TimelineScale = {
+  questionSize: number;
+  questionLineHeight: number;
+  answerSize: number;
+  answerLineHeight: number;
+  /** 답을 몇 줄까지 보여 줄지의 상한. 실제 줄 수는 전부 들어갈 때까지 줄어든다 */
+  maxAnswerLines: number;
+};
+
+// 인덱스 = 항목 수 - 1. 뒤로 갈수록 작다. 한 크기로 질문·답이 모두 들어가지 않으면 더 작은 크기로 넘어간다.
+export const TIMELINE_SCALES: readonly TimelineScale[] = [
+  { questionSize: 46, questionLineHeight: 64, answerSize: 54, answerLineHeight: 80, maxAnswerLines: 8 },
+  { questionSize: 38, questionLineHeight: 54, answerSize: 42, answerLineHeight: 64, maxAnswerLines: 5 },
+  { questionSize: 32, questionLineHeight: 44, answerSize: 36, answerLineHeight: 54, maxAnswerLines: 4 },
+  { questionSize: 30, questionLineHeight: 40, answerSize: 33, answerLineHeight: 48, maxAnswerLines: 4 },
+  { questionSize: 28, questionLineHeight: 38, answerSize: 32, answerLineHeight: 46, maxAnswerLines: 4 },
+];
 
 export type TimelineBlock = {
   question: string[];
@@ -217,41 +231,67 @@ export type TimelineBlock = {
   top: number;
 };
 
-/**
- * 타임라인 항목의 줄과 위치를 정한다. 답을 최대 4줄에서 시작해, 전부 들어갈 때까지 줄 수를 줄인다
- * (항목이 5개면 답은 보통 2줄까지, 적으면 더 길게). 남는 공간은 항목 사이 간격으로 나눈다.
- */
-export function layoutTimeline(
-  measureQuestion: MeasureText,
-  measureAnswer: MeasureText,
-  items: MonthCardItem[],
-): TimelineBlock[] {
-  if (items.length === 0) return [];
-  const area = TIMELINE.bodyBottom - TIMELINE.bodyTop;
+export type TimelineLayout = {
+  scale: TimelineScale;
+  blocks: TimelineBlock[];
+  /** 긴 질문·답이 "…"로 줄어 카드에 다 담기지 않았다 */
+  truncated: boolean;
+};
 
-  for (let answerLines = TIMELINE.maxAnswerLines; answerLines >= 1; answerLines -= 1) {
+/** 글자 크기별 너비 측정기. 질문(굵게)과 답(보통)의 글꼴이 달라 종류와 크기를 받는다. */
+export type MeasureFor = (kind: "question" | "answer", size: number) => MeasureText;
+
+/** `wrapText` 결과가 원문을 다 담았는지. 마지막 줄이 "…"로 끝나는데 원문은 그렇지 않으면 줄어든 것이다. */
+function wasCut(lines: string[], text: string): boolean {
+  const last = lines.at(-1);
+  return last !== undefined && last.endsWith("…") && !text.trimEnd().endsWith("…");
+}
+
+/**
+ * 타임라인 항목의 줄과 위치를 정한다. 항목 수에 맞는 글자 크기에서 시작해 답을 최대 줄 수에서부터 줄여 가며 전부 들어갈 때까지 맞추고,
+ * 그래도 안 들어가면 더 작은 글자 크기로 넘어간다. 남는 공간은 항목 사이 간격으로 나눈다.
+ * 가장 작은 크기에서도 안 들어가면 답을 한 줄씩만 넣는다(긴 글은 "…"로 줄이고 `truncated`로 알린다).
+ */
+export function layoutTimeline(measure: MeasureFor, items: MonthCardItem[]): TimelineLayout | null {
+  if (items.length === 0) return null;
+  const area = TIMELINE.bodyBottom - TIMELINE.bodyTop;
+  const gaps = items.length - 1;
+  const first = Math.min(items.length, TIMELINE_SCALES.length) - 1;
+
+  const place = (scale: TimelineScale, answerLines: number) => {
     const blocks = items.map((item) => ({
-      question: wrapText(measureQuestion, item.question, TIMELINE_TEXT_WIDTH, TIMELINE.maxQuestionLines),
-      answer: wrapText(measureAnswer, item.answer, TIMELINE_TEXT_WIDTH, answerLines),
+      question: wrapText(measure("question", scale.questionSize), item.question, TIMELINE_TEXT_WIDTH, TIMELINE.maxQuestionLines),
+      answer: wrapText(measure("answer", scale.answerSize), item.answer, TIMELINE_TEXT_WIDTH, answerLines),
     }));
     const heights = blocks.map(
       (block) =>
-        block.question.length * TIMELINE.questionLineHeight +
+        block.question.length * scale.questionLineHeight +
         TIMELINE.questionGap +
-        block.answer.length * TIMELINE.answerLineHeight,
+        block.answer.length * scale.answerLineHeight,
     );
-    const total = heights.reduce((sum, height) => sum + height, 0);
-    const gaps = items.length - 1;
-    if (total + gaps * TIMELINE.gapMin > area && answerLines > 1) continue;
+    return { blocks, heights, total: heights.reduce((sum, height) => sum + height, 0) };
+  };
 
-    const gap =
-      gaps === 0 ? 0 : Math.min(TIMELINE.gapMax, Math.max(TIMELINE.gapMin, (area - total) / gaps));
-    let top: number = TIMELINE.bodyTop;
-    return blocks.map((block, index) => {
-      const placed = { ...block, top };
-      top += heights[index] + gap;
-      return placed;
-    });
+  for (let index = first; index < TIMELINE_SCALES.length; index += 1) {
+    const scale = TIMELINE_SCALES[index];
+    const lastScale = index === TIMELINE_SCALES.length - 1;
+    for (let answerLines = scale.maxAnswerLines; answerLines >= 1; answerLines -= 1) {
+      const { blocks, heights, total } = place(scale, answerLines);
+      if (total + gaps * TIMELINE.gapMin > area && !(lastScale && answerLines === 1)) continue;
+
+      const gap =
+        gaps === 0 ? 0 : Math.min(TIMELINE.gapMax, Math.max(TIMELINE.gapMin, (area - total) / gaps));
+      let top: number = TIMELINE.bodyTop;
+      const placed = blocks.map((block, i) => {
+        const placedBlock = { ...block, top };
+        top += heights[i] + gap;
+        return placedBlock;
+      });
+      const truncated = placed.some(
+        (block, i) => wasCut(block.question, items[i].question) || wasCut(block.answer, items[i].answer),
+      );
+      return { scale, blocks: placed, truncated };
+    }
   }
-  return [];
+  return null;
 }

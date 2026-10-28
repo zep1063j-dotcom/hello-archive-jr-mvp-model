@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { signOut } from "@/app/actions/auth";
+import { SignOutButton } from "@/components/sign-out-button";
 import { Eyebrow, PageSkeleton } from "@/components/states";
 import { ChildForm } from "@/components/child-form";
 import { ChildPhotoEditor } from "@/components/child-photo-editor";
@@ -43,14 +43,9 @@ export default function ProfilePage(props: PageProps<"/profile">) {
         <Suspense fallback={<p className="mt-2 text-sm text-ink-mute">불러오는 중…</p>}>
           <SignedInAs />
         </Suspense>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="min-h-12 w-full border border-ink px-5 text-left font-semibold hover:bg-ink hover:text-paper"
-          >
-            로그아웃
-          </button>
-        </form>
+        <SignOutButton className="min-h-12 w-full border border-ink px-5 text-left font-semibold hover:bg-ink hover:text-paper rounded-xl">
+          로그아웃
+        </SignOutButton>
         <a
           href={contactHref("[Hello Archive jr] 의견 보내기")}
           className="flex min-h-12 items-center px-1 text-sm text-ink-soft underline underline-offset-4"
@@ -95,7 +90,7 @@ async function ChildSection({
 }: {
   searchParams: PageProps<"/profile">["searchParams"];
 }) {
-  const child = await requireChild("/profile");
+  const child = await requireChild();
   const { edit, saved } = await searchParams;
   const today = todayKst();
   const editing = edit === "1";
@@ -113,7 +108,6 @@ async function ChildSection({
       {editing ? (
         <div className="mt-5">
           <ChildForm
-            mode="update"
             initial={{ nickname: child.nickname, birthDate: child.birthDate }}
             min={earliestBirthDate(today)}
             max={today}
@@ -122,7 +116,7 @@ async function ChildSection({
       ) : (
         <>
           {saved === "1" && (
-            <p role="status" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
+            <p role="status" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm rounded-r-xl">
               저장했어요.
             </p>
           )}
@@ -143,7 +137,7 @@ async function ChildSection({
           </dl>
           <Link
             href="/profile?edit=1"
-            className="mt-2 flex min-h-12 w-full items-center justify-between border border-ink px-5 font-semibold hover:bg-ink hover:text-paper"
+            className="mt-2 flex min-h-12 w-full items-center justify-between border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-xl"
           >
             수정하기
             <span aria-hidden>↗</span>
@@ -169,12 +163,12 @@ async function EmailSection({
         주간 질문 이메일
       </h2>
       {result === "error" && (
-        <p role="alert" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
+        <p role="alert" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm rounded-r-xl">
           저장하지 못했어요. 잠시 후 다시 시도해 주세요.
         </p>
       )}
       {(result === "on" || result === "off") && (
-        <p role="status" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
+        <p role="status" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm rounded-r-xl">
           {result === "on"
             ? "수신을 켰어요. 다음 월요일 저녁부터 이번 주 질문을 보내 드려요."
             : "수신을 껐어요."}
@@ -189,7 +183,7 @@ async function EmailSection({
         <input type="hidden" name="consent" value={consent ? "0" : "1"} />
         <button
           type="submit"
-          className="flex min-h-12 w-full items-center justify-between border border-ink px-5 font-semibold hover:bg-ink hover:text-paper"
+          className="flex min-h-12 w-full items-center justify-between border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-xl"
         >
           {consent ? "이메일 받지 않기" : "이메일 받기"}
           <span aria-hidden>↗</span>

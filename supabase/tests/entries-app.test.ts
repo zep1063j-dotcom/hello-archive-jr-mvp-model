@@ -269,3 +269,74 @@ describe("기록 검색·지난 질문 쿼리 (두 부모 계정)", () => {
     assert.deepEqual(result.data, []);
   });
 });
+
+// 같은 주에 시기별 질문 행이 여러 개일 때 기록 찾기·저장 (D-038, D-039).
+// src/lib/week-entry.ts 의 findWeekEntry() 와 같은 쿼리 모양이다(그 파일은 server-only라 테스트에서 직접 부를 수 없다).
+describe("시기별 질문 행과 한 주의 기록 (D-039)", () => {
+  let user: TestUser;
+  let other: TestUser;
+  let early: { id: string; week_start: string };
+  let child: { id: string; week_start: string };
+
+  const findWeekEntry = (who: TestUser, weekStart: string) =>
+    who.client
+      .from("entries")
+      .select("id, weekly_questions!inner(id, body, week_start)")
+      .eq("user_id", who.id)
+      .eq("child_id", who.childId)
+      .eq("weekly_questions.week_start", weekStart)
+      .order("created_at", { ascending: true })
+      .limit(1);
+
+  before(async () => {
+    // 유년·아동 질문이 모두 있는 주 하나를 고른다
+    const rows = await service.from("weekly_questions").select("id, week_start, stage").in("stage", ["early", "child"]).order("week_start").limit(40);
+    assert.ifError(rows.error);
+    const byWeek = new Map<string, { early?: { id: string; week_start: string }; child?: { id: string; week_start: string } }>();
+    for (const row of rows.data!) {
+      const slot = byWeek.get(row.week_start) ?? {};
+      if (row.stage === "early") slot.early = row;
+      if (row.stage === "child") slot.child = row;
+      byWeek.set(row.week_start, slot);
+    }
+    const week = [...byWeek.values()].find((slot) => slot.early && slot.child);
+    assert.ok(week?.early && week.child, "같은 주에 early·child 질문이 모두 있는 시드가 필요하다 (supabase/apply/5_question_stages.sql)");
+    early = week.early;
+    child = week.child;
+    user = await createTestUser("week-a");
+    other = await createTestUser("week-b");
+  });
+
+  after(async () => {
+    if (user) await service.auth.admin.deleteUser(user.id);
+    if (other) await service.auth.admin.deleteUser(other.id);
+  });
+
+  it("다른 시기의 질문 행에 매달린 기록도 같은 주면 찾는다", async () => {
+    const saved = await insertEntry(user, early.id, "예전 시기 질문에 쓴 기록");
+    assert.ifError(saved.error);
+    const found = await findWeekEntry(user, child.week_start);
+    assert.ifError(found.error);
+    assert.equal(found.data?.length, 1);
+    assert.equal(found.data![0].weekly_questions.id, early.id); // 기록은 자기 질문 행에 그대로 매달려 있다
+  });
+
+  it("다른 부모는 그 주 기록을 찾지 못한다", async () => {
+    const found = await findWeekEntry(other, child.week_start);
+    assert.ifError(found.error);
+    assert.deepEqual(found.data, []);
+  });
+
+  it("앱은 같은 주의 기존 기록을 찾아 본문만 고친다 — 지금 시기의 질문 행에 새 기록을 만들지 않는다", async () => {
+    // 액션(saveEntryForQuestion)과 같은 순서: 주로 기존 기록 찾기 → 있으면 본문 수정
+    const existing = (await findWeekEntry(user, child.week_start)).data![0];
+    const updated = await updateEntryBody(user, existing.id, "수정한 본문");
+    assert.ifError(updated.error);
+    assert.equal(updated.data?.length, 1);
+
+    const all = await readMyEntries(user);
+    assert.equal(all.data?.length, 1, "한 주에 기록은 하나");
+    assert.equal(all.data![0].body, "수정한 본문");
+    assert.equal(all.data![0].weekly_questions.id, early.id);
+  });
+});

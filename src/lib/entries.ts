@@ -23,21 +23,33 @@ export type WeekSlot = {
   isCurrent: boolean;
 };
 
-/** 이번 주를 맨 오른쪽으로 하는 최근 count주 (오래된 주 → 이번 주 순). */
+/**
+ * 이번 주를 맨 오른쪽으로 하는 최근 count주 (오래된 주 → 이번 주 순).
+ * `firstWeekStart`(아이를 등록한 주)가 있으면 그 이전 주는 넣지 않는다: 가입 전의 주가 "기록 없음"으로 보이지 않게 한다.
+ * 가입 전 날짜의 기록이 있더라도(이전 데이터) 그 주부터는 보인다.
+ */
 export function recentWeeks(
   entries: Entry[],
   thisWeekStart: string,
   count: number,
+  firstWeekStart?: string,
 ): WeekSlot[] {
   const byWeek = new Map(entries.map((e) => [e.question.weekStart, e]));
-  return Array.from({ length: count }, (_, i) => {
-    const weekStart = addDays(thisWeekStart, -7 * (count - 1 - i));
-    return {
+  const earliestWritten = [...byWeek.keys()].sort()[0];
+  const floor =
+    firstWeekStart === undefined
+      ? undefined
+      : earliestWritten !== undefined && earliestWritten < firstWeekStart
+        ? earliestWritten
+        : firstWeekStart;
+  const weeks = Array.from({ length: count }, (_, i) => addDays(thisWeekStart, -7 * (count - 1 - i)));
+  return weeks
+    .filter((weekStart) => floor === undefined || weekStart >= floor)
+    .map((weekStart) => ({
       weekStart,
       entry: byWeek.get(weekStart) ?? null,
       isCurrent: weekStart === thisWeekStart,
-    };
-  });
+    }));
 }
 
 /** 연속으로 기록한 주 수. 이번 주를 아직 안 썼으면 지난주부터 센다. */

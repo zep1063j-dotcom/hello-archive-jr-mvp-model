@@ -2,12 +2,14 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { io } from "next/cache";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import type { Database } from "@/types/database";
 import { getSupabaseEnv } from "./env";
 
-// 서버 컴포넌트·서버 액션용 Supabase 클라이언트. 요청마다 새로 만든다 (재사용 금지).
+// 서버 컴포넌트·서버 액션용 Supabase 클라이언트. 요청마다 새로 만든다 (요청 사이 재사용 금지).
+// 같은 요청 안에서는 React cache로 하나를 나눠 쓴다(쿠키 읽기·클라이언트 생성을 화면당 여러 번 하지 않는다).
 // 로그인한 부모의 세션 쿠키를 쓰므로 RLS가 그 사용자 기준으로 적용된다.
-export async function createClient() {
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
   // 세션 확인(supabase-js)이 현재 시각을 읽으므로 요청 시점 작업으로 표시한다 (미리 만드는 화면에 넣지 않는다).
   await io();
@@ -29,4 +31,4 @@ export async function createClient() {
       },
     },
   });
-}
+});

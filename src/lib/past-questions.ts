@@ -23,17 +23,21 @@ export function isPastQuestionAnswerable(input: {
 
 type QuestionLike = { id: string; weekStart: string };
 
-/** 아직 답하지 않은 지난 질문 (최근 주 먼저). */
+/**
+ * 아직 답하지 않은 지난 질문 (최근 주 먼저).
+ * 답했는지는 질문 id가 아니라 "그 주"로 판단한다: 같은 주에도 시기별 질문 행이 여러 개라서(D-038),
+ * 다른 시기의 질문 행에 매달린 기록이어도 그 주는 답한 주다.
+ */
 export function missedQuestions<Q extends QuestionLike>(input: {
   questions: Q[];
-  answeredQuestionIds: Set<string>;
+  answeredWeekStarts: Set<string>;
   thisWeekStart: string;
   joinedWeekStart: string;
 }): Q[] {
   return input.questions
     .filter(
       (question) =>
-        !input.answeredQuestionIds.has(question.id) &&
+        !input.answeredWeekStarts.has(question.weekStart) &&
         isPastQuestionAnswerable({
           questionWeekStart: question.weekStart,
           thisWeekStart: input.thisWeekStart,

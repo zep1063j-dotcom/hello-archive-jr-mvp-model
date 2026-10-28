@@ -6,6 +6,7 @@ import {
   CARD_QUOTES,
   layoutTimeline,
   TIMELINE,
+  TIMELINE_TEXT_WIDTH,
   pickQuote,
   seasonOfMonth,
   wrapText,
@@ -54,33 +55,71 @@ const item = (n: number, answerLength: number) => ({
 });
 
 describe("앞면(타임라인) 배치", () => {
-  const m = (text: string) => Array.from(text).length * 30;
+  // 글자 크기에 비례하는 가짜 측정기: 글자 한 개의 너비 = 크기의 0.9배
+  const measureFor = (_kind: "question" | "answer", size: number) => (text: string) => Array.from(text).length * size * 0.9;
 
-  it("항목 5개가 긴 답이어도 본문 영역 안에 들어가고 순서대로 놓인다", () => {
-    const blocks = layoutTimeline(m, m, [1, 2, 3, 4, 5].map((n) => item(n, 400)));
-    assert.equal(blocks.length, 5);
-    let previous = TIMELINE.bodyTop - 1;
-    for (const block of blocks) {
-      assert.ok(block.top > previous);
-      previous = block.top;
-    }
-    const last = blocks[4];
-    const bottom =
+  const bottomOf = (layout: NonNullable<ReturnType<typeof layoutTimeline>>) => {
+    const last = layout.blocks[layout.blocks.length - 1];
+    return (
       last.top +
-      last.question.length * TIMELINE.questionLineHeight +
+      last.question.length * layout.scale.questionLineHeight +
       TIMELINE.questionGap +
-      last.answer.length * TIMELINE.answerLineHeight;
-    assert.ok(bottom <= TIMELINE.bodyBottom, `bottom ${bottom}`);
+      last.answer.length * layout.scale.answerLineHeight
+    );
+  };
+
+  for (const count of [1, 2, 3, 4, 5]) {
+    it(`항목 ${count}개가 긴 답이어도 본문 영역 안에 들어가고 순서대로 놓인다`, () => {
+      const layout = layoutTimeline(measureFor, Array.from({ length: count }, (_, i) => item(i + 1, 400)));
+      assert.ok(layout);
+      assert.equal(layout.blocks.length, count);
+      let previous = TIMELINE.bodyTop - 1;
+      for (const block of layout.blocks) {
+        assert.ok(block.top > previous);
+        previous = block.top;
+        // 질문·답 모두 줄 너비를 넘지 않는다 (겹침·넘침 없음)
+        for (const line of block.question) assert.ok(measureFor("question", layout.scale.questionSize)(line) <= TIMELINE_TEXT_WIDTH);
+        for (const line of block.answer) assert.ok(measureFor("answer", layout.scale.answerSize)(line) <= TIMELINE_TEXT_WIDTH);
+      }
+      assert.ok(bottomOf(layout) <= TIMELINE.bodyBottom, `bottom ${bottomOf(layout)}`);
+      // 긴 답은 줄어든 것을 알려야 한다
+      assert.equal(layout.truncated, true);
+    });
+  }
+
+  it("기록이 적을수록 글자가 크다 (1개 > 3개 > 5개)", () => {
+    const sizeOf = (count: number) =>
+      layoutTimeline(measureFor, Array.from({ length: count }, (_, i) => item(i + 1, 20)))!.scale.answerSize;
+    assert.ok(sizeOf(1) > sizeOf(2));
+    assert.ok(sizeOf(2) > sizeOf(3));
+    assert.ok(sizeOf(3) >= sizeOf(4));
+    assert.ok(sizeOf(4) > sizeOf(5));
+  });
+
+  it("짧은 기록 하나는 크게, 줄여지지 않고 전부 보인다", () => {
+    const layout = layoutTimeline(measureFor, [{ dateLabel: "10/27", question: "오늘 뭐 하고 놀았어?", answer: "블록으로 높은 탑을 쌓았어요." }]);
+    assert.ok(layout);
+    assert.equal(layout.truncated, false);
+    assert.ok(layout.scale.answerSize >= 44);
+    assert.equal(layout.blocks[0].answer.join(" "), "블록으로 높은 탑을 쌓았어요.");
   });
 
   it("항목이 적으면 답을 더 길게 보여 준다", () => {
-    const few = layoutTimeline(m, m, [item(1, 400), item(2, 400)]);
-    const many = layoutTimeline(m, m, [1, 2, 3, 4, 5].map((n) => item(n, 400)));
-    assert.ok(few[0].answer.length > many[0].answer.length);
+    const few = layoutTimeline(measureFor, [item(1, 400), item(2, 400)])!;
+    const many = layoutTimeline(measureFor, [1, 2, 3, 4, 5].map((n) => item(n, 400)))!;
+    assert.ok(few.blocks[0].answer.length > many.blocks[0].answer.length);
   });
 
-  it("항목이 없으면 빈 배치", () => {
-    assert.deepEqual(layoutTimeline(m, m, []), []);
+  it("항목이 없으면 배치가 없다", () => {
+    assert.equal(layoutTimeline(measureFor, []), null);
+  });
+
+  it("긴 질문(2줄 초과)도 넘치지 않고 줄었음을 알린다", () => {
+    const layout = layoutTimeline(measureFor, [
+      { dateLabel: "10/27", question: "아주 아주 긴 질문 ".repeat(40), answer: "짧은 답" },
+    ])!;
+    assert.ok(layout.blocks[0].question.length <= TIMELINE.maxQuestionLines);
+    assert.equal(layout.truncated, true);
   });
 });
 

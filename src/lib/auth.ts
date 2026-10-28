@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 // 로그인 후 돌아갈 수 있는 경로. 외부 주소·로그인 페이지로의 이탈(open redirect)을 막기 위해
@@ -30,11 +31,12 @@ export function loginUrl(next?: string) {
  * 로그인하지 않았으면 /login으로 보낸다. 권한이 필요한 서버 코드는 이 함수를 먼저 부른다.
  * (쿠키를 읽으므로 Suspense 경계 안에서 호출해야 한다.)
  */
-export async function requireUser() {
+// 한 화면을 그리는 동안 여러 조회 함수가 각자 부르므로, 같은 요청 안에서는 Auth 서버 왕복을 한 번만 한다 (React cache).
+export const requireUser = cache(async () => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
     redirect("/login");
   }
   return data.user;
-}
+});
