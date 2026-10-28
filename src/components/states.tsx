@@ -83,9 +83,11 @@ function SkeletonBlock({ className }: { className: string }) {
   return <div className={`animate-pulse bg-paper-deep ${className} rounded-xl`} />;
 }
 
+// 메뉴를 옮길 때마다 뼈대가 번쩍였다 사라지지 않게, 뼈대는 잠깐(약 0.25초) 기다렸다가 부드럽게 나타난다.
+// 금방 불러오면 뼈대 없이 바로 내용이 보이고, 오래 걸릴 때만 뼈대가 보인다.
 export function PageSkeleton({ rows = 3 }: { rows?: number }) {
   return (
-    <div role="status" aria-label="불러오는 중" className="flex flex-col gap-5">
+    <div role="status" aria-label="불러오는 중" className="skeleton-delayed flex flex-col gap-5">
       <SkeletonBlock className="h-9 w-2/3" />
       {Array.from({ length: rows }, (_, i) => (
         <SkeletonBlock key={i} className="h-24 w-full" />

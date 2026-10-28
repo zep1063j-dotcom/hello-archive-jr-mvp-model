@@ -321,3 +321,8 @@
 ## D-045 · 2026-10-28 · 개발 중 `instant` 검증 콘솔 오류 끄기
 - 현상: 개발 서버에서 소개의 "이메일로 시작하기"를 누르면(로그인 상태면 `/login`→`/home`) 개발 오버레이에 `Route "/home": Could not validate instant ...`가 뜬다. 원인: Cache Components의 개발용 "즉시 이동 검증"(기본 `validationLevel: 'warning'`)이 모든 페이지를 로그인 정보 없이 미리 그려 보는데, 로그인이 필요한 화면은 `requireUser()`가 `/login`으로 이동(NEXT_REDIRECT)해 항상 실패한다. 서버 로그의 cause가 `src/lib/auth.ts`의 `redirect("/login")`이다.
 - 결정: `next.config.ts`에 `experimental.instantInsights.validationLevel: "manual-warning"`(`instant`를 직접 내보낸 화면만 검증). 개발 중 경고일 뿐 실제 동작·프로덕션에는 영향이 없다. 근본 해결(세션 읽기를 `use cache: private` 등으로 정리해 이동을 즉시로 만들기)은 별도 과제다. 이 경고가 이번 변경 이전에도 났는지는 확인하지 않았다.
+
+## D-046 · 2026-10-28 · 메뉴 이동 때 화면 깜빡임: 뼈대를 지연해서 보인다
+- 현상(사용자 보고): 화면이 자주 깜빡인다. 측정(개발 서버, 개발 DB, 메뉴 이동): 이전 화면 → 뼈대(`PageSkeleton`)가 번쩍 나타남 → 약 0.3~1초 뒤 내용으로 교체. 여기에 이동 슬라이드(View Transition)까지 겹쳐 "슬라이드 + 뼈대 번쩍 + 내용 교체"가 연달아 보인다. 개발 서버는 컴파일·원격 DB 때문에 프로덕션보다 느려 더 심하다(프로덕션 체감은 실측하지 않음).
+- 조치: 뼈대는 0.25초 뒤에 0.22초 동안 서서히 나타난다(`.skeleton-delayed`). 금방 불러오면 뼈대가 아예 보이지 않고, 오래 걸릴 때만 보인다. 슬라이드 전환과 질문 카드의 깜빡이는 점(`animate-pulse`)은 손대지 않았다.
+- 한계: 뼈대 지연을 CSS 값으로만 확인했다(이 미리보기 창은 백그라운드라 프레임 단위 측정이 안 됨).

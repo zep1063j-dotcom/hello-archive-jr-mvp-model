@@ -61,6 +61,16 @@ body {
   outline-offset: 2px;
 }
 
+/* ---- 불러오는 중 뼈대: 짧은 로딩에는 보이지 않게 지연 후 나타난다 ---- */
+.skeleton-delayed {
+  animation: skeleton-in 220ms ease-out 250ms both;
+}
+@keyframes skeleton-in {
+  from {
+    opacity: 0;
+  }
+}
+
 /* ---- 환영 온보딩 창 (D-040) ---- */
 /* 가운데 작은 창이 아래에서 살짝 올라오며 나타나고, 단계가 바뀌면 같은 창의 크기와 내용이 부드럽게 바뀐다. 전환은 300ms 안팎. */
 .onboarding-dialog {
