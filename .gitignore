@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 샘플 기록 확인용 로그인 정보 (supabase/dev/sample-entries.ts)
+.sample-account.local.json

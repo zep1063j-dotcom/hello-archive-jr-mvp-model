@@ -46,7 +46,6 @@ async function ArchiveContent({
         .flatMap((chapter) => {
           const model = buildMonthCard({
             chapter,
-            childId: child.id,
             childName: child.nickname,
             birthDate: child.birthDate,
             today,

@@ -5,9 +5,11 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   CARD_HEIGHT,
   CARD_WIDTH,
-  layoutTimeline,
+  cardTitle,
+  layoutHeader,
+  layoutStory,
   seasonOfMonth,
-  TIMELINE,
+  STORY,
   wrapText,
   type MeasureFor,
   type MonthCardModel,
@@ -16,13 +18,14 @@ import { CARD_THEMES, type CardTheme } from "@/lib/month-card-theme";
 
 // 1개월 이야기 카드 (D-029). 캔버스에 그려서 화면에 보여 주고, 같은 캔버스를 PNG로 저장·공유한다
 // (보이는 것과 저장되는 것이 같다). 카드는 부모의 기기 안에서만 만들어지고 서버로 올라가지 않는다.
-// 앞면은 타임라인, 뒷면은 폴라로이드 (D-033). 바깥 모서리도 둥글게 자른다(모서리 바깥은 투명).
+// 이야기 면은 아이의 답이 가장 크게, 사진 면은 사진 한 장과 날짜 (D-048). 색은 카드 대상 달의 계절을 따른다.
+// 바깥 모서리도 둥글게 자른다(모서리 바깥은 투명).
 
-const MARGIN = TIMELINE.margin;
+const MARGIN = STORY.margin;
 /** 카드 바깥 모서리 둥글기(px). 모서리 바깥은 투명하게 저장된다. */
 const CARD_RADIUS = 56;
 
-type Side = "front" | "back";
+type Side = "story" | "photo";
 type Status = "loading" | "ready" | "error";
 
 const fontOf = (weight: number, size: number, family: string) => `${weight} ${size}px ${family}`;
@@ -78,7 +81,8 @@ const measureWith = (ctx: CanvasRenderingContext2D, font: string) => (text: stri
   return ctx.measureText(text).width;
 };
 
-function drawFooter(ctx: CanvasRenderingContext2D, t: CardTheme, family: string, right: string) {
+function drawFooter(ctx: CanvasRenderingContext2D, t: CardTheme, family: string) {
+  ctx.textBaseline = "middle";
   ctx.fillStyle = t.accent;
   ctx.beginPath();
   ctx.arc(MARGIN + 6, 1304, 6, 0, Math.PI * 2);
@@ -87,168 +91,164 @@ function drawFooter(ctx: CanvasRenderingContext2D, t: CardTheme, family: string,
   ctx.font = fontOf(600, 24, family);
   ctx.textAlign = "left";
   ctx.fillText("Hello Archive jr", MARGIN + 24, 1304);
-  ctx.textAlign = "right";
-  ctx.fillText(right, CARD_WIDTH - MARGIN, 1304);
-  ctx.textAlign = "left";
 }
 
 /**
- * 앞면: 큰 월 숫자 + 날짜가 붙은 세로 타임라인. 기록이 적으면 글자를 크게 그린다 (D-042).
- * 긴 질문·답이 줄어 다 담기지 않았는지(truncated)를 돌려준다. 화면에 보이는 캔버스가 곧 저장·공유되는 이미지다.
+ * 이야기 면: 브랜드·연월 → "○○의 10월 이야기" → 아이의 답(가장 크게) → 기록 날짜 → 작은 질문 → 하단 브랜드.
+ * 기록 1개는 인용 카드, 2~4개는 구분선으로 나눈다. 글을 줄이지 않고 담을 수 있는 만큼 담고(shownCount),
+ * 한 개도 안 들어갈 만큼 긴 글만 줄인다(truncated). 화면에 보이는 캔버스가 곧 저장·공유되는 이미지다.
  */
-function drawFront(canvas: HTMLCanvasElement, model: MonthCardModel, family: string, t: CardTheme): { truncated: boolean } {
-  const ctx = setup(canvas, t.front);
-  if (!ctx) return { truncated: false };
-
-  const monthNumber = model.monthLabel.replace("월", "");
-  ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = t.ink;
-  ctx.font = fontOf(700, 260, family);
-  ctx.fillText(monthNumber, MARGIN, 292);
-  const numberWidth = ctx.measureText(monthNumber).width;
-  ctx.font = fontOf(700, 90, family);
-  ctx.fillText("월", MARGIN + numberWidth + 8, 292);
-  ctx.textBaseline = "middle";
-
-  ctx.textAlign = "right";
-  ctx.fillStyle = t.mute;
-  ctx.font = fontOf(600, 34, family);
-  ctx.fillText(model.yearLabel, CARD_WIDTH - MARGIN, 122);
-  const who = [model.childName, model.ageLabel].filter(Boolean).join(" · ");
-  const [whoLine] = wrapText(measureWith(ctx, fontOf(600, 34, family)), who, 470, 1);
-  ctx.fillStyle = t.soft;
-  ctx.font = fontOf(600, 34, family);
-  ctx.fillText(whoLine ?? "", CARD_WIDTH - MARGIN, 178);
-  ctx.textAlign = "left";
-
-  const measureFor: MeasureFor = (kind, size) =>
-    measureWith(ctx, fontOf(400, size, family));
-  const layout = layoutTimeline(measureFor, model.items);
-  if (!layout) return { truncated: false };
-  const { scale, blocks } = layout;
-  const questionFont = fontOf(400, scale.questionSize, family);
-  const answerFont = fontOf(400, scale.answerSize, family);
-
-  const dotX = TIMELINE.dotLeft + TIMELINE.dotSize / 2;
-  const dotYs = blocks.map((block) => block.top + scale.questionLineHeight / 2);
-  if (dotYs.length > 1) {
-    ctx.fillStyle = t.line;
-    roundedRect(ctx, dotX - 2, dotYs[0], 4, dotYs[dotYs.length - 1] - dotYs[0], 2);
-    ctx.fill();
-  }
-
-  blocks.forEach((block, index) => {
-    const dotY = dotYs[index];
-    ctx.fillStyle = t.mute;
-    ctx.font = fontOf(600, 26, family);
-    ctx.fillText(model.items[index].dateLabel, MARGIN, dotY);
-
-    ctx.fillStyle = t.accent;
-    ctx.beginPath();
-    ctx.arc(dotX, dotY, TIMELINE.dotSize / 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 질문은 차분한 보조색, 답은 가장 진한 글자색 (D-047)
-    let y = block.top;
-    ctx.fillStyle = t.soft;
-    ctx.font = questionFont;
-    for (const line of block.question) {
-      ctx.fillText(line, TIMELINE.textLeft, y + scale.questionLineHeight / 2);
-      y += scale.questionLineHeight;
-    }
-    y += TIMELINE.questionGap;
-    ctx.fillStyle = t.ink;
-    ctx.font = answerFont;
-    for (const line of block.answer) {
-      ctx.fillText(line, TIMELINE.textLeft, y + scale.answerLineHeight / 2);
-      y += scale.answerLineHeight;
-    }
-  });
-
-  drawFooter(ctx, t, family, `이달의 기록 ${model.entryCount}개`);
-  return { truncated: layout.truncated };
-}
-
-/** 뒷면: 살짝 기울어진 폴라로이드. 사진이 있으면 사진 + 글귀, 없으면 큰 글귀 */
-function drawBack(
+function drawStory(
   canvas: HTMLCanvasElement,
   model: MonthCardModel,
   family: string,
-  photo: HTMLImageElement | null,
+  t: CardTheme,
+): { truncated: boolean; shownCount: number } {
+  const none = { truncated: false, shownCount: 0 };
+  const ctx = setup(canvas, t.background);
+  if (!ctx) return none;
+
+  const measureFor: MeasureFor = (kind, size) =>
+    measureWith(ctx, fontOf(kind === "title" ? 700 : kind === "answer" ? 600 : 400, size, family));
+  const header = layoutHeader(measureFor, cardTitle(model));
+  const layout = layoutStory(measureFor, model.items, header.bodyTop);
+  if (!layout) return none;
+
+  // 작은 브랜드명(왼쪽)과 연도·월(오른쪽)
+  ctx.fillStyle = t.mute;
+  ctx.font = fontOf(600, 24, family);
+  ctx.textAlign = "left";
+  ctx.fillText("Hello Archive jr", MARGIN, 104);
+  ctx.textAlign = "right";
+  ctx.fillStyle = t.soft;
+  ctx.font = fontOf(600, 30, family);
+  ctx.fillText(`${model.yearLabel}년 ${model.monthLabel}`, CARD_WIDTH - MARGIN, 104);
+  ctx.textAlign = "left";
+
+  // 제목과 나이, 짧은 포인트 선
+  ctx.fillStyle = t.ink;
+  ctx.font = fontOf(700, header.titleSize, family);
+  header.titleLines.forEach((line, index) =>
+    ctx.fillText(line, MARGIN, header.titleTop + index * header.titleLineHeight + header.titleLineHeight / 2),
+  );
+  ctx.fillStyle = t.mute;
+  ctx.font = fontOf(600, 28, family);
+  ctx.fillText(model.ageLabel, MARGIN, header.ageY);
+  ctx.fillStyle = t.accent;
+  roundedRect(ctx, MARGIN, header.ruleY, 64, 6, 3);
+  ctx.fill();
+
+  const { scale, blocks } = layout;
+  const single = blocks.length === 1;
+  const textLeft = single ? MARGIN + STORY.quoteIndent : MARGIN;
+  const dateFont = fontOf(600, 26, family);
+
+  blocks.forEach((block) => {
+    let y = block.top;
+    // 기록이 1개면 답 옆에 짧은 인용 막대를 세운다
+    if (single) {
+      ctx.fillStyle = t.accent;
+      roundedRect(ctx, MARGIN, y + 8, 6, Math.min(block.answer.length * scale.answerLineHeight - 16, 120), 3);
+      ctx.fill();
+    }
+    ctx.fillStyle = t.ink;
+    ctx.font = fontOf(600, scale.answerSize, family);
+    for (const line of block.answer) {
+      ctx.fillText(line, textLeft, y + scale.answerLineHeight / 2);
+      y += scale.answerLineHeight;
+    }
+    y += STORY.answerGap;
+
+    // 기록 날짜 (작은 점 + 날짜)
+    ctx.fillStyle = t.accent;
+    ctx.beginPath();
+    ctx.arc(textLeft + 5, y + STORY.dateLineHeight / 2, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = t.mute;
+    ctx.font = dateFont;
+    ctx.fillText(block.dateLabel, textLeft + 22, y + STORY.dateLineHeight / 2);
+    y += STORY.dateLineHeight + STORY.dateGap;
+
+    // 질문은 작고 차분하게
+    ctx.fillStyle = t.soft;
+    ctx.font = fontOf(400, scale.questionSize, family);
+    for (const line of block.question) {
+      ctx.fillText(line, textLeft, y + scale.questionLineHeight / 2);
+      y += scale.questionLineHeight;
+    }
+
+    if (block.dividerY !== undefined) {
+      ctx.fillStyle = t.line;
+      ctx.fillRect(MARGIN, block.dividerY - 1, CARD_WIDTH - MARGIN * 2, 2);
+    }
+  });
+
+  drawFooter(ctx, t, family);
+  return { truncated: layout.truncated, shownCount: layout.shownCount };
+}
+
+/** 사진 면: 옅은 바탕에 사진을 넉넉하게, 아래에 날짜만 작게. 사진에 대한 글은 만들어 넣지 않는다. */
+function drawPhoto(
+  canvas: HTMLCanvasElement,
+  model: MonthCardModel,
+  family: string,
+  photo: HTMLImageElement,
+  dateLabel: string,
   t: CardTheme,
 ) {
-  const ctx = setup(canvas, t.back);
+  const ctx = setup(canvas, t.photoBackground);
   if (!ctx) return;
 
-  const card = { x: 110, y: 110, w: CARD_WIDTH - 220, h: 1000 };
+  // 사진은 틀을 꽉 채우도록 잘라 넣는다(얼굴이 보통 위쪽이라 위를 조금 더 남긴다).
+  const frame = { x: 64, y: 64, w: CARD_WIDTH - 128, h: 1060 };
+  const scale = Math.max(frame.w / photo.width, frame.h / photo.height);
+  const sw = frame.w / scale;
+  const sh = frame.h / scale;
   ctx.save();
-  ctx.translate(CARD_WIDTH / 2, card.y + card.h / 2);
-  ctx.rotate((-1.5 * Math.PI) / 180);
-  ctx.translate(-CARD_WIDTH / 2, -(card.y + card.h / 2));
-
-  ctx.fillStyle = t.polaroid;
-  roundedRect(ctx, card.x, card.y, card.w, card.h, 44);
-  ctx.fill();
-  ctx.strokeStyle = t.line;
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  const centerX = CARD_WIDTH / 2;
-  ctx.textAlign = "center";
-  if (photo) {
-    // 사진은 틀을 꽉 채우도록 잘라 넣는다(얼굴이 보통 위쪽이라 위를 조금 더 남긴다).
-    const frame = { x: card.x + 40, y: card.y + 40, w: card.w - 80, h: 760 };
-    const scale = Math.max(frame.w / photo.width, frame.h / photo.height);
-    const sw = frame.w / scale;
-    const sh = frame.h / scale;
-    ctx.save();
-    roundedRect(ctx, frame.x, frame.y, frame.w, frame.h, 28);
-    ctx.clip();
-    ctx.drawImage(photo, (photo.width - sw) / 2, (photo.height - sh) * 0.35, sw, sh, frame.x, frame.y, frame.w, frame.h);
-    ctx.restore();
-
-    const quoteFont = fontOf(600, 44, family);
-    const lines = wrapText(measureWith(ctx, quoteFont), model.quote, card.w - 100, 2);
-    ctx.fillStyle = t.polaroidInk;
-    ctx.font = quoteFont;
-    lines.forEach((line, index) => ctx.fillText(line, centerX, frame.y + frame.h + 80 + index * 66));
-  } else {
-    ctx.fillStyle = t.accent;
-    ctx.font = fontOf(700, 220, family);
-    ctx.fillText("“", centerX, card.y + 250);
-    const quoteFont = fontOf(600, 58, family);
-    const lines = wrapText(measureWith(ctx, quoteFont), model.quote, card.w - 140, 5);
-    const lineHeight = 96;
-    const startY = card.y + 560 - ((lines.length - 1) * lineHeight) / 2;
-    ctx.fillStyle = t.polaroidInk;
-    ctx.font = quoteFont;
-    lines.forEach((line, index) => ctx.fillText(line, centerX, startY + index * lineHeight));
-  }
+  roundedRect(ctx, frame.x, frame.y, frame.w, frame.h, 32);
+  ctx.clip();
+  ctx.drawImage(photo, (photo.width - sw) / 2, (photo.height - sh) * 0.35, sw, sh, frame.x, frame.y, frame.w, frame.h);
   ctx.restore();
 
-  ctx.textAlign = "center";
+  ctx.textAlign = "left";
+  ctx.fillStyle = t.accent;
+  ctx.beginPath();
+  ctx.arc(frame.x + 8, 1184, 6, 0, Math.PI * 2);
+  ctx.fill();
   ctx.fillStyle = t.soft;
-  ctx.font = fontOf(600, 34, family);
+  ctx.font = fontOf(600, 30, family);
+  ctx.fillText(dateLabel, frame.x + 28, 1184);
   const [label] = wrapText(
-    measureWith(ctx, fontOf(600, 34, family)),
-    `${model.yearLabel}년 ${model.monthLabel} · ${model.childName}`,
-    CARD_WIDTH - MARGIN * 2,
+    measureWith(ctx, fontOf(600, 26, family)),
+    `${model.yearLabel}년 ${model.monthLabel}`,
+    360,
     1,
   );
-  ctx.fillText(label ?? "", centerX, 1196);
+  ctx.textAlign = "right";
+  ctx.fillStyle = t.mute;
+  ctx.font = fontOf(600, 26, family);
+  ctx.fillText(label ?? "", CARD_WIDTH - frame.x, 1184);
   ctx.textAlign = "left";
-  drawFooter(ctx, t, family, "");
+
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = t.accent;
+  ctx.beginPath();
+  ctx.arc(frame.x + 8, 1304, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = t.mute;
+  ctx.font = fontOf(600, 24, family);
+  ctx.fillText("Hello Archive jr", frame.x + 28, 1304);
 }
 
 function allText(model: MonthCardModel): string {
   return [
+    cardTitle(model),
     model.yearLabel,
     model.monthLabel,
-    model.childName,
     model.ageLabel,
-    model.quote,
+    model.photo?.dateLabel ?? "",
     ...model.items.flatMap((item) => [item.dateLabel, item.question, item.answer]),
-    "Hello Archive jr 이달의 기록 개의 한 달 년 “ · … 0123456789/",
+    "Hello Archive jr 년 월 일 이야기 · … 0123456789/",
   ].join(" ");
 }
 
@@ -263,7 +263,7 @@ function download(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-const SIDE_LABEL: Record<Side, string> = { front: "앞면", back: "뒷면" };
+const SIDE_LABEL: Record<Side, string> = { story: "이야기 면", photo: "사진 면" };
 
 // 파일 공유를 지원하는 기기(주로 휴대폰)에서만 공유 버튼을 보인다. 서버 렌더링에서는 false로 시작한다.
 const subscribeNothing = () => () => {};
@@ -283,14 +283,17 @@ export function MonthCard({
   fullHref: string;
 }) {
   const probeRef = useRef<HTMLSpanElement>(null);
-  const canvases = useRef<Record<Side, HTMLCanvasElement | null>>({ front: null, back: null });
-  const [side, setSide] = useState<Side>("front");
+  const canvases = useRef<Record<Side, HTMLCanvasElement | null>>({ story: null, photo: null });
+  const [side, setSide] = useState<Side>("story");
   const [status, setStatus] = useState<Status>("loading");
   const [notice, setNotice] = useState("");
   const canShare = useSyncExternalStore(subscribeNothing, supportsFileShare, () => false);
   const [busy, setBusy] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
+  // 사진 면은 사진이 실제로 그려졌을 때만 있다. 사진이 없거나 못 불러오면 이야기 면만 저장·공유한다.
+  const [hasPhotoFace, setHasPhotoFace] = useState(false);
   const [truncated, setTruncated] = useState(false);
+  const [shownCount, setShownCount] = useState(model.items.length);
 
   useEffect(() => {
     let cancelled = false;
@@ -304,20 +307,22 @@ export function MonthCard({
         // 글꼴을 못 불러오면 대체 글꼴로 그린다.
       }
       let photo: HTMLImageElement | null = null;
-      if (model.back.kind === "photo") {
+      if (model.photo) {
         try {
-          photo = await loadImage(model.back.url);
+          photo = await loadImage(model.photo.url);
         } catch {
           if (!cancelled) setPhotoFailed(true);
         }
       }
       if (cancelled) return;
-      const { front, back } = canvases.current;
-      if (!front || !back) return;
+      const { story, photo: photoCanvas } = canvases.current;
+      if (!story) return;
       const theme = CARD_THEMES[seasonOfMonth(model.month)];
-      const drawn = drawFront(front, model, family, theme);
-      drawBack(back, model, family, photo, theme);
+      const drawn = drawStory(story, model, family, theme);
+      if (photo && model.photo && photoCanvas) drawPhoto(photoCanvas, model, family, photo, model.photo.dateLabel, theme);
+      setHasPhotoFace(Boolean(photo && model.photo && photoCanvas));
       setTruncated(drawn.truncated);
+      setShownCount(drawn.shownCount);
       setStatus("ready");
     })().catch(() => {
       if (!cancelled) setStatus("error");
@@ -326,6 +331,10 @@ export function MonthCard({
       cancelled = true;
     };
   }, [model]);
+
+  // 사진 면이 없으면 이야기 면을 보여 준다.
+  const activeSide: Side = hasPhotoFace ? side : "story";
+  const faces: Side[] = hasPhotoFace ? ["story", "photo"] : ["story"];
 
   async function blobOf(target: Side): Promise<Blob> {
     const canvas = canvases.current[target];
@@ -351,12 +360,10 @@ export function MonthCard({
     setNotice("");
     try {
       const files = await Promise.all(
-        (["front", "back"] as const).map(
-          async (target) => new File([await blobOf(target)], `${fileBase}-${target}.png`, { type: "image/png" }),
-        ),
+        faces.map(async (target) => new File([await blobOf(target)], `${fileBase}-${target}.png`, { type: "image/png" })),
       );
       if (!navigator.canShare?.({ files })) {
-        setNotice("이 기기에서는 바로 공유할 수 없어요. 앞면·뒷면 이미지를 저장한 뒤 메신저나 SNS에서 보내 주세요.");
+        setNotice("이 기기에서는 바로 공유할 수 없어요. 이미지를 저장한 뒤 메신저나 SNS에서 보내 주세요.");
         return;
       }
       await navigator.share({ files, title: `${model.yearLabel}년 ${model.monthLabel} 이야기 카드` });
@@ -371,32 +378,32 @@ export function MonthCard({
   }
 
   const ready = status === "ready";
-  const frontLabel = `${model.yearLabel}년 ${model.monthLabel} 이야기 카드 앞면. 질문과 답 ${model.items.length}개`;
-  const backLabel =
-    model.back.kind === "photo" && !photoFailed
-      ? `${model.yearLabel}년 ${model.monthLabel} 이야기 카드 뒷면. 이달의 사진`
-      : `${model.yearLabel}년 ${model.monthLabel} 이야기 카드 뒷면. 글귀: ${model.quote}`;
+  const storyLabel = `${model.yearLabel}년 ${model.monthLabel} 이야기 카드 이야기 면. 기록 ${shownCount}개의 답과 질문`;
+  const photoLabel = `${model.yearLabel}년 ${model.monthLabel} 이야기 카드 사진 면. ${model.photo?.dateLabel ?? ""} 사진`;
+  const omittedCount = model.entryCount - shownCount;
 
   return (
     <div className="flex flex-col gap-5">
       {/* 카드 글꼴(명조)을 읽어 오기 위한 보이지 않는 요소 */}
       <span ref={probeRef} aria-hidden className="font-serif invisible absolute" />
 
-      <div role="group" aria-label="카드 면 고르기" className="grid grid-cols-2 overflow-hidden rounded-xl border border-ink">
-        {(["front", "back"] as const).map((target) => (
-          <button
-            key={target}
-            type="button"
-            aria-pressed={side === target}
-            onClick={() => setSide(target)}
-            className={`min-h-12 font-semibold ${
-              side === target ? "bg-ink text-paper" : "hover:bg-blush"
-            } ${target === "back" ? "border-l border-ink" : ""}`}
-          >
-            {SIDE_LABEL[target]}
-          </button>
-        ))}
-      </div>
+      {faces.length > 1 && (
+        <div role="group" aria-label="카드 면 고르기" className="grid grid-cols-2 overflow-hidden rounded-xl border border-ink">
+          {faces.map((target) => (
+            <button
+              key={target}
+              type="button"
+              aria-pressed={activeSide === target}
+              onClick={() => setSide(target)}
+              className={`min-h-12 font-semibold ${
+                activeSide === target ? "bg-ink text-paper" : "hover:bg-blush"
+              } ${target === "photo" ? "border-l border-ink" : ""}`}
+            >
+              {SIDE_LABEL[target]}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="relative mx-auto w-full max-w-sm">
         {!ready && (
@@ -412,30 +419,35 @@ export function MonthCard({
         {/* 캔버스는 숨겨 둔 면까지 모두 그려 두어야 공유·저장이 된다 */}
         <canvas
           ref={(node) => {
-            canvases.current.front = node;
+            canvases.current.story = node;
           }}
           role="img"
-          aria-label={frontLabel}
-          className={`aspect-[4/5] h-auto w-full [filter:drop-shadow(0_2px_10px_rgba(0,0,0,0.14))] ${ready && side === "front" ? "block" : "hidden"}`}
+          aria-label={storyLabel}
+          className={`aspect-[4/5] h-auto w-full [filter:drop-shadow(0_2px_10px_rgba(0,0,0,0.14))] ${ready && activeSide === "story" ? "block" : "hidden"}`}
         />
-        <canvas
-          ref={(node) => {
-            canvases.current.back = node;
-          }}
-          role="img"
-          aria-label={backLabel}
-          className={`aspect-[4/5] h-auto w-full [filter:drop-shadow(0_2px_10px_rgba(0,0,0,0.14))] ${ready && side === "back" ? "block" : "hidden"}`}
-        />
+        {model.photo && (
+          <canvas
+            ref={(node) => {
+              canvases.current.photo = node;
+            }}
+            role="img"
+            aria-label={photoLabel}
+            className={`aspect-[4/5] h-auto w-full [filter:drop-shadow(0_2px_10px_rgba(0,0,0,0.14))] ${ready && activeSide === "photo" ? "block" : "hidden"}`}
+          />
+        )}
       </div>
 
       {photoFailed && (
-        <p className="text-sm text-ink-soft">사진을 불러오지 못해 글귀로 보여 드려요.</p>
+        <p className="text-sm text-ink-soft">사진을 불러오지 못해 이야기 면만 보여 드려요.</p>
+      )}
+      {ready && !model.photo && (
+        <p className="text-sm text-ink-soft">이 달에는 올린 사진이 없어 이야기 면만 만들었어요.</p>
       )}
 
-      {ready && (truncated || model.entryCount > model.items.length) && (
+      {ready && (truncated || omittedCount > 0) && (
         <p role="note" className="rounded-xl bg-paper-deep/60 px-4 py-3 text-[13px] leading-relaxed text-ink-soft">
-          {model.entryCount > model.items.length && `이 달의 기록 ${model.entryCount}개 중 최근 ${model.items.length}개만 카드에 담겼어요. `}
-          {truncated && "긴 질문이나 답은 카드에서 줄여서 보여요. "}
+          {omittedCount > 0 && `이 달의 기록 ${model.entryCount}개 중 최근 ${shownCount}개가 카드에 담겼어요. `}
+          {truncated && "긴 글은 카드에서 줄여서 보여요. "}
           <Link href={fullHref} className="font-semibold underline underline-offset-4 hover:text-brand">
             이 달의 전체 기록 보기
           </Link>
@@ -444,7 +456,7 @@ export function MonthCard({
 
       <div className="flex flex-col gap-2">
         <p className="rounded-xl bg-paper-deep/60 px-4 py-3 text-[12px] leading-relaxed text-ink-soft">
-          공유하거나 저장한 이미지에는 아이 별명({model.childName})·나이와 카드에 보이는 질문·답이 그대로 담기고, 뒷면에는 이 달의 사진이 들어갈 수 있어요.
+          공유하거나 저장한 이미지에는 아이 별명({model.childName})·나이와 카드에 보이는 질문·답이 그대로 담기고, 사진 면에는 이 달의 사진이 들어갈 수 있어요.
           이미지를 받은 사람은 누구나 볼 수 있으니 확인한 뒤에 공유해 주세요.
         </p>
         {!canShare && (
@@ -459,12 +471,12 @@ export function MonthCard({
             disabled={!ready || busy}
             className="flex min-h-12 w-full items-center justify-between rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
           >
-            앞면·뒷면 함께 공유하기
+            {faces.length > 1 ? "이야기 면·사진 면 함께 공유하기" : "이야기 면 공유하기"}
             <span aria-hidden>↗</span>
           </button>
         )}
-        <div className="grid grid-cols-2 gap-2">
-          {(["front", "back"] as const).map((target) => (
+        <div className={`grid gap-2 ${faces.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+          {faces.map((target) => (
             <button
               key={target}
               type="button"

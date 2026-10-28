@@ -35,7 +35,6 @@ async function MonthCardContent({
   const chapter = makeChapter("1m", range, await getMyEntries(child.id), today);
   const model = buildMonthCard({
     chapter,
-    childId: child.id,
     childName: child.nickname,
     birthDate: child.birthDate,
     today,
@@ -54,7 +53,7 @@ async function MonthCardContent({
         <Eyebrow>{chapter.isOpen ? "진행 중인 달" : "완결된 달"}</Eyebrow>
         <h1 className="mt-3 font-serif text-3xl font-bold">{chapter.title} 이야기 카드</h1>
         <p className="mt-2 text-sm text-ink-soft">
-          그 달의 질문과 답으로 만든 카드예요. 이미지로 저장하거나 공유할 수 있어요.
+          그 달 아이의 말로 만든 카드예요. 이미지로 저장하거나 공유할 수 있어요.
         </p>
       </header>
       {model ? (

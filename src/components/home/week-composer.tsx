@@ -211,7 +211,7 @@ export function WeekComposer({
           <h2
             className={
               hasEntry
-                ? "min-w-0 flex-1 text-[0.9375rem] leading-relaxed text-ink-soft"
+                ? "min-w-0 flex-1 text-[0.9375rem] leading-relaxed font-medium text-brand-deep"
                 : "min-w-0 flex-1 font-serif text-[1.5rem] leading-[1.55] font-semibold md:text-[1.75rem]"
             }
           >
