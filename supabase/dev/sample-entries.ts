@@ -308,6 +308,33 @@ async function seed() {
   console.log(`샘플 기록 ${entries.data.length}개, 사진 ${photoCount}장, 새 질문 ${state.questionIds.length}개를 넣었다.`);
   console.log(`기록한 달: ${plan[0].month} ~ ${plan[plan.length - 1].month}. 확인용 로그인 정보는 ${STATE_FILE} (git 제외).`);
   console.log("달별 기록 수:", plan.map((p) => `${p.month}=${p.days.length}`).join(" "));
+  await yearly();
+}
+
+// ---- 매년 같은 질문 (2025년 답. 키는 src/lib/yearly-questions.ts 와 같다) ----
+const YEARLY_2025: Record<string, string> = {
+  growth: "키 92cm, 몸무게 13kg쯤이에요. 작년에 입던 바지는 이제 발목 위로 올라와요. 신발은 160에서 175로 바뀌었어요.",
+  favorites: "공룡과 소방차, 그리고 엄마가 만들어 주는 계란말이를 제일 좋아해요. 자기 전에는 \"반짝반짝 작은 별\"을 꼭 불러야 해요.",
+  words: "\"내가 할 거야!\"와 \"왜요?\"를 하루에 백 번은 해요. 사랑해를 \"사앙해\"라고 발음하는데 너무 귀여워서 고쳐 주지 않고 있어요.",
+  dream: "소방차 아저씨가 되고 싶대요. 불도 끄고 고양이도 구해 줄 거라고 해요.",
+  message: "1년 뒤의 하루야, 그때도 엄마 아빠한테 \"사앙해\"라고 말해 줄래? 지금처럼 웃으면서 건강하게 자라 주렴.",
+};
+
+async function yearly() {
+  if (!existsSync(STATE_FILE)) throw new Error(`${STATE_FILE} 가 없다. 먼저 npm run sample:seed 를 실행한다.`);
+  const state = JSON.parse(readFileSync(STATE_FILE, "utf8")) as State;
+  const child = await service.from("children").select("id").eq("user_id", state.userId).single();
+  if (child.error || !child.data) throw new Error(`children: ${child.error?.code}`);
+  const rows = Object.entries(YEARLY_2025).map(([question_key, body]) => ({
+    user_id: state.userId,
+    child_id: child.data.id,
+    year: 2025,
+    question_key,
+    body,
+  }));
+  const saved = await service.from("yearly_answers").upsert(rows, { onConflict: "child_id,year,question_key" });
+  if (saved.error) throw new Error(`yearly_answers: ${saved.error.code}`);
+  console.log(`2025년 매년 같은 질문 답 ${rows.length}개를 넣었다 (계정을 지우면 함께 지워진다).`);
 }
 
 // ---- 지우기 ----
@@ -333,4 +360,5 @@ async function clean() {
 const command = process.argv[2];
 if (command === "seed") await seed();
 else if (command === "clean") await clean();
-else throw new Error("사용법: node --env-file=.env.local supabase/dev/sample-entries.ts seed|clean");
+else if (command === "yearly") await yearly();
+else throw new Error("사용법: node --env-file=.env.local supabase/dev/sample-entries.ts seed|clean|yearly");
