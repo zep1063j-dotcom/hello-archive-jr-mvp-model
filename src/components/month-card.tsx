@@ -122,11 +122,11 @@ function drawFront(canvas: HTMLCanvasElement, model: MonthCardModel, family: str
   ctx.textAlign = "left";
 
   const measureFor: MeasureFor = (kind, size) =>
-    measureWith(ctx, fontOf(kind === "question" ? 600 : 400, size, family));
+    measureWith(ctx, fontOf(400, size, family));
   const layout = layoutTimeline(measureFor, model.items);
   if (!layout) return { truncated: false };
   const { scale, blocks } = layout;
-  const questionFont = fontOf(600, scale.questionSize, family);
+  const questionFont = fontOf(400, scale.questionSize, family);
   const answerFont = fontOf(400, scale.answerSize, family);
 
   const dotX = TIMELINE.dotLeft + TIMELINE.dotSize / 2;
@@ -148,8 +148,9 @@ function drawFront(canvas: HTMLCanvasElement, model: MonthCardModel, family: str
     ctx.arc(dotX, dotY, TIMELINE.dotSize / 2, 0, Math.PI * 2);
     ctx.fill();
 
+    // 질문은 차분한 보조색, 답은 가장 진한 글자색 (D-047)
     let y = block.top;
-    ctx.fillStyle = t.accent;
+    ctx.fillStyle = t.soft;
     ctx.font = questionFont;
     for (const line of block.question) {
       ctx.fillText(line, TIMELINE.textLeft, y + scale.questionLineHeight / 2);

@@ -6,6 +6,7 @@ import {
   CARD_QUOTES,
   layoutTimeline,
   TIMELINE,
+  TIMELINE_SCALES,
   TIMELINE_TEXT_WIDTH,
   pickQuote,
   seasonOfMonth,
@@ -86,6 +87,13 @@ describe("앞면(타임라인) 배치", () => {
       assert.equal(layout.truncated, true);
     });
   }
+
+  it("질문 글자는 언제나 답 글자보다 작다 (답이 주인공, D-047)", () => {
+    for (const scale of TIMELINE_SCALES) {
+      assert.ok(scale.questionSize < scale.answerSize);
+      assert.ok(scale.questionLineHeight < scale.answerLineHeight);
+    }
+  });
 
   it("기록이 적을수록 글자가 크다 (1개 > 3개 > 5개)", () => {
     const sizeOf = (count: number) =>

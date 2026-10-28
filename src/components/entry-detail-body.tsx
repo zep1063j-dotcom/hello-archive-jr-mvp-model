@@ -152,7 +152,7 @@ export function EntryDetailBody({
 
   return (
     <>
-      <p className="mt-6 whitespace-pre-wrap font-serif text-[1.0625rem] leading-[2]">
+      <p className="mt-6 whitespace-pre-wrap font-serif text-[1.375rem] leading-[1.9] text-ink">
         {shownBody}
       </p>
       <div className="mt-6">

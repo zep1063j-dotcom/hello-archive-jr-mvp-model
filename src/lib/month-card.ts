@@ -215,13 +215,13 @@ export type TimelineScale = {
   maxAnswerLines: number;
 };
 
-// 인덱스 = 항목 수 - 1. 뒤로 갈수록 작다. 한 크기로 질문·답이 모두 들어가지 않으면 더 작은 크기로 넘어간다.
+// 인덱스 = 항목 수 - 1. 뒤로 갈수록 작다. 질문은 언제나 답보다 작고 차분하게 둔다: 시간이 지나 소중해지는 것은 아이의 말이다 (D-047). 한 크기로 질문·답이 모두 들어가지 않으면 더 작은 크기로 넘어간다.
 export const TIMELINE_SCALES: readonly TimelineScale[] = [
-  { questionSize: 46, questionLineHeight: 64, answerSize: 54, answerLineHeight: 80, maxAnswerLines: 8 },
-  { questionSize: 38, questionLineHeight: 54, answerSize: 42, answerLineHeight: 64, maxAnswerLines: 5 },
-  { questionSize: 32, questionLineHeight: 44, answerSize: 36, answerLineHeight: 54, maxAnswerLines: 4 },
-  { questionSize: 30, questionLineHeight: 40, answerSize: 33, answerLineHeight: 48, maxAnswerLines: 4 },
-  { questionSize: 28, questionLineHeight: 38, answerSize: 32, answerLineHeight: 46, maxAnswerLines: 4 },
+  { questionSize: 36, questionLineHeight: 52, answerSize: 56, answerLineHeight: 82, maxAnswerLines: 8 },
+  { questionSize: 32, questionLineHeight: 44, answerSize: 44, answerLineHeight: 66, maxAnswerLines: 5 },
+  { questionSize: 28, questionLineHeight: 40, answerSize: 38, answerLineHeight: 56, maxAnswerLines: 4 },
+  { questionSize: 27, questionLineHeight: 38, answerSize: 35, answerLineHeight: 52, maxAnswerLines: 4 },
+  { questionSize: 26, questionLineHeight: 36, answerSize: 32, answerLineHeight: 46, maxAnswerLines: 4 },
 ];
 
 export type TimelineBlock = {

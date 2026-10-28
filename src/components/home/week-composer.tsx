@@ -186,7 +186,7 @@ export function WeekComposer({
 
   return (
     <section aria-labelledby="this-week" className="rounded-3xl border border-blush-deep bg-blush text-ink">
-      <div className="px-5 pt-6 pb-5 md:px-7">
+      <div className={`px-5 pt-6 md:px-7 ${hasEntry && !open ? "pb-3" : "pb-5"}`}>
         <p
           id="this-week"
           className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] text-ink-soft uppercase"
@@ -206,8 +206,15 @@ export function WeekComposer({
                   ? "바꾼 질문"
                   : "이번 주의 질문"}
         </p>
-        <div className="mt-4 flex items-start gap-3">
-          <h2 className="min-w-0 flex-1 font-serif text-[1.5rem] leading-[1.55] font-semibold md:text-[1.75rem]">
+        <div className={`${hasEntry ? "mt-2" : "mt-4"} flex items-start gap-3`}>
+          {/* 기록이 있으면 질문은 작고 차분하게, 답이 주인공이다 (D-047) */}
+          <h2
+            className={
+              hasEntry
+                ? "min-w-0 flex-1 text-[0.9375rem] leading-relaxed text-ink-soft"
+                : "min-w-0 flex-1 font-serif text-[1.5rem] leading-[1.55] font-semibold md:text-[1.75rem]"
+            }
+          >
             {questionBody}
           </h2>
           {canChangeQuestion && (
@@ -388,8 +395,8 @@ export function WeekComposer({
           </div>
         </form>
       ) : shownBody !== null ? (
-        <div className="flex flex-col gap-4 border-t border-blush-deep px-5 py-5 md:px-7">
-          <p className="line-clamp-4 font-serif leading-[1.85] whitespace-pre-wrap text-ink">
+        <div className="flex flex-col gap-4 px-5 pb-5 md:px-7">
+          <p className="line-clamp-6 font-serif text-[1.375rem] leading-[1.75] font-medium whitespace-pre-wrap text-ink md:text-[1.5rem]">
             {shownBody}
           </p>
           <PhotoStrip photos={entry?.photos ?? []} />

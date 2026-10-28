@@ -48,11 +48,11 @@ export function EntryTimeline({
                       <span className="mt-1 block text-xs">{Number(month)}월</span>
                     </span>
                     <span>
-                      <span className="block text-[13px] font-semibold text-brand">
+                      <span className="block text-[13px] leading-snug text-ink-soft">
                         {entry.question.body}
                       </span>
                       <span
-                        className={`mt-2 block font-serif leading-[1.85] whitespace-pre-wrap ${
+                        className={`mt-2 block font-serif text-[1.125rem] leading-[1.8] whitespace-pre-wrap ${
                           isOpen ? "" : "line-clamp-2"
                         }`}
                       >

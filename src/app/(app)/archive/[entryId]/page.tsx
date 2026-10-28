@@ -40,9 +40,9 @@ async function EntryDetail({
         ← 아카이브
       </Link>
       <article>
-        <header className="border-b border-ink pb-6">
+        <header className="border-b border-line pb-5">
           <Eyebrow>{formatWeekLabel(entry.question.weekStart)}의 질문</Eyebrow>
-          <h1 className="mt-4 font-serif text-2xl font-bold leading-[1.5]">
+          <h1 className="mt-3 text-[0.9375rem] leading-relaxed text-ink-soft">
             {entry.question.body}
           </h1>
         </header>

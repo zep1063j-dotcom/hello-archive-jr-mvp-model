@@ -23,10 +23,10 @@ export function EntryCard({ entry }: { entry: Entry }) {
         <span className="mt-1 block text-xs">{Number(month)}월</span>
       </time>
       <div>
-        <p className="text-[13px] font-semibold text-brand">
+        <p className="text-[13px] leading-snug text-ink-soft">
           {entry.question.body}
         </p>
-        <p className="mt-2 line-clamp-3 font-serif leading-[1.85] text-ink">
+        <p className="mt-2 line-clamp-3 font-serif text-[1.125rem] leading-[1.8] text-ink">
           {entry.body}
         </p>
         {entry.photos.length > 0 && (
