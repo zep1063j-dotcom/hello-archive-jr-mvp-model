@@ -317,3 +317,7 @@
 - 소개(`/`)에 예시 한 세트(질문 → 한 문장 답 → 저장된 기록 → 월별 카드, "예시예요. 실제 아이의 기록이 아니에요" 표기, 지어낸 데이터). 로그인 화면에 "매주 질문 하나로 아이의 말과 일상을 남겨요." 한 줄. 코드 입력 단계에 안내(몇 분 안에 도착·스팸함·코드는 일정 시간 뒤 만료·이메일 수정 가능)와 "코드 다시 받기" **60초 대기**(화면 쪽 장치, 순수 `resend-wait.ts`). **코드 유효시간의 실제 값은 Supabase 설정이라 확인하지 못해 숫자를 쓰지 않았다.** 이메일 코드 로그인과 `next` 복귀는 그대로.
 - 모서리: 버튼·입력칸은 `rounded-xl`, 카드·알림 상자는 `rounded-2xl/3xl`, 입력 요소 기본값 0.75rem(`@layer base`). 기록장 느낌의 가는 선과 세리프는 유지.
 - 응답 속도: 한 화면을 그리는 동안 각 조회 함수가 따로 부르던 `requireUser()`(Auth 서버 왕복)·`createClient()`·`getMyChild()`·`getMyChoices()`를 React `cache`로 **요청당 1회**로 줄였다(홈 한 번에 코드상 약 8회 → 1회 — 코드를 읽고 센 값이며 전후 응답 시간 실측 비교는 하지 않음). 로컬 dev에서 홈 서버 응답 약 250~500ms(개발 DB, 서버 로그).
+
+## D-045 · 2026-10-28 · 개발 중 `instant` 검증 콘솔 오류 끄기
+- 현상: 개발 서버에서 소개의 "이메일로 시작하기"를 누르면(로그인 상태면 `/login`→`/home`) 개발 오버레이에 `Route "/home": Could not validate instant ...`가 뜬다. 원인: Cache Components의 개발용 "즉시 이동 검증"(기본 `validationLevel: 'warning'`)이 모든 페이지를 로그인 정보 없이 미리 그려 보는데, 로그인이 필요한 화면은 `requireUser()`가 `/login`으로 이동(NEXT_REDIRECT)해 항상 실패한다. 서버 로그의 cause가 `src/lib/auth.ts`의 `redirect("/login")`이다.
+- 결정: `next.config.ts`에 `experimental.instantInsights.validationLevel: "manual-warning"`(`instant`를 직접 내보낸 화면만 검증). 개발 중 경고일 뿐 실제 동작·프로덕션에는 영향이 없다. 근본 해결(세션 읽기를 `use cache: private` 등으로 정리해 이동을 즉시로 만들기)은 별도 과제다. 이 경고가 이번 변경 이전에도 났는지는 확인하지 않았다.
