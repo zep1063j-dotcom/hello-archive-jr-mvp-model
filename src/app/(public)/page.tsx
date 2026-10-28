@@ -25,6 +25,13 @@ export default function Landing() {
           </p>
         </div>
 
+        <div>
+          <PrimaryLink href="/login">이메일로 시작하기</PrimaryLink>
+          <p className="mt-4 text-xs text-ink-mute">
+            비밀번호 없이, 메일로 받은 숫자 코드로 로그인해요.
+          </p>
+        </div>
+
         <ol className="grid overflow-hidden rounded-2xl border border-ink md:grid-cols-3">
           {[
             ["01", "매주 질문은 하나"],
@@ -42,13 +49,6 @@ export default function Landing() {
         </ol>
 
         <ExampleFlow />
-
-        <div>
-          <PrimaryLink href="/login">이메일로 시작하기</PrimaryLink>
-          <p className="mt-4 text-xs text-ink-mute">
-            비밀번호 없이, 메일로 받은 숫자 코드로 로그인해요.
-          </p>
-        </div>
       </main>
       <SiteFooter />
     </>
