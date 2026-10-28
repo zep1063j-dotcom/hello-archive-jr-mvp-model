@@ -9,6 +9,10 @@ export function Logo() {
         Hello Archive{" "}
         <span className="font-serif font-normal italic text-brand">jr</span>
       </span>
+      {/* 지금은 베타 운영 중임을 알리는 작은 표시 */}
+      <span className="self-center rounded-full border border-brand/40 px-1.5 py-px text-[10px] leading-4 font-semibold tracking-wider text-brand-deep">
+        BETA
+      </span>
     </span>
   );
 }
