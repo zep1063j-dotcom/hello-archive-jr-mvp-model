@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { stageAt } from "../../src/lib/life-stage.ts";
 import { buildUnsubscribeUrl, unsubscribeWithToken } from "../../src/lib/unsubscribe.ts";
 import { runWeeklyEmailJob } from "../../src/lib/weekly-email-job.ts";
 import type { EmailMessage, SendResult } from "../../src/lib/weekly-email.ts";
@@ -23,12 +24,14 @@ const clientOptions = { auth: { persistSession: false, autoRefreshToken: false }
 const service: Db = createClient<Database>(url, serviceKey, clientOptions);
 const APP_URL = "https://example.test";
 const UNSUBSCRIBE_SECRET = "test-only-secret";
+// 임시 자녀의 기본 생년월일. 주간 질문의 시기(stage)는 질문이 나오는 주의 만 나이로 정해지므로 임시 질문도 이 생일로 시기를 맞춘다 (D-038).
+const DEFAULT_BIRTH = "2022-05-14";
 
 type TestUser = { id: string; email: string; client: Db; childId: string | null };
 
 async function createTestUser(
   label: string,
-  opts: { consent: boolean; child: boolean },
+  opts: { consent: boolean; child: boolean; birthDate?: string },
 ): Promise<TestUser> {
   const email = `weekly-test-${label}-${randomBytes(6).toString("hex")}@example.com`;
   const password = randomBytes(24).toString("base64url");
@@ -47,7 +50,7 @@ async function createTestUser(
   if (opts.child) {
     const child = await client
       .from("children")
-      .insert({ user_id: id, nickname: label, birth_date: "2022-05-14" })
+      .insert({ user_id: id, nickname: label, birth_date: opts.birthDate ?? DEFAULT_BIRTH })
       .select("id")
       .single();
     assert.ifError(child.error);
@@ -94,25 +97,42 @@ describe("주간 이메일 발송 작업 (실제 DB + 가짜 발송기)", () => 
   const WEEK = "2099-01-05"; // 월요일
   const WEEK_CONCURRENT = "2099-01-12";
   const WEEK_PAST = "2020-01-06";
+  // 시기별 질문 확인용 주: 2022-05-14생은 만 10세(child), 2026-02-01생은 만 6세(early), 2010-05-01생은 만 22세(young, 이 주에 young 질문 없음)
+  const WEEK_STAGES = "2033-01-03";
+  const stageQuestionIds: string[] = [];
+  let G: TestUser, H: TestUser, I: TestUser;
 
   before(async () => {
     for (const week of [WEEK, WEEK_CONCURRENT, WEEK_PAST]) {
       const q = await service
         .from("weekly_questions")
-        .insert({ week_start: week, body: `[weekly-test] 질문 ${week}`, hint: "힌트" })
+        .insert({ week_start: week, stage: stageAt(DEFAULT_BIRTH, week), body: `[weekly-test] 질문 ${week}`, hint: "힌트" })
         .select("id")
         .single();
       assert.ifError(q.error);
       questionIds.push(q.data!.id);
       questionByWeek.set(week, q.data!.id);
     }
+    for (const stage of ["child", "early"] as const) {
+      const q = await service
+        .from("weekly_questions")
+        .insert({ week_start: WEEK_STAGES, stage, body: `[weekly-test] ${stage} ${WEEK_STAGES}`, hint: null })
+        .select("id")
+        .single();
+      assert.ifError(q.error);
+      questionIds.push(q.data!.id);
+      stageQuestionIds.push(q.data!.id);
+    }
+    G = await createTestUser("g-stage-child", { consent: true, child: true });
+    H = await createTestUser("h-stage-early", { consent: true, child: true, birthDate: "2026-02-01" });
+    I = await createTestUser("i-stage-none", { consent: true, child: true, birthDate: "2010-05-01" });
     A = await createTestUser("a-ok", { consent: true, child: true });
     B = await createTestUser("b-no-consent", { consent: false, child: true });
     C = await createTestUser("c-no-child", { consent: true, child: false });
     D = await createTestUser("d-wrote", { consent: true, child: true });
     E = await createTestUser("e-fail-once", { consent: true, child: true });
     F = await createTestUser("f-fail-always", { consent: true, child: true });
-    userIds.push(A.id, B.id, C.id, D.id, E.id, F.id);
+    userIds.push(A.id, B.id, C.id, D.id, E.id, F.id, G.id, H.id, I.id);
     failMode.set(E.email, "once");
     failMode.set(F.email, "always");
 
@@ -225,6 +245,27 @@ describe("주간 이메일 발송 작업 (실제 DB + 가짜 발송기)", () => 
     assert.equal(summary.status, "ok");
     assert.equal(sent.filter((m) => m.text.includes(WEEK_PAST)).length, 0);
     assert.equal(await delivery(A, WEEK_PAST), null);
+  });
+
+  // 다른 테스트의 발송 횟수 계산에 끼어들지 않도록 맨 마지막에 실행하고, 이 주(WEEK_STAGES)의 메일만 센다.
+  const stageMails = (user: TestUser) => sentTo(user).filter((m) => m.text.includes(WEEK_STAGES));
+
+  it("부모마다 자녀의 시기에 맞는 질문을 보낸다. 그 시기의 질문이 없는 주는 보내지 않는다 (D-038)", async () => {
+    const summary = await run(`${WEEK_STAGES}T20:00:00+09:00`);
+    assert.equal(summary.status, "ok");
+    assert.equal(stageMails(G).length, 1);
+    assert.ok(stageMails(G)[0].text.includes(`[weekly-test] child ${WEEK_STAGES}`));
+    assert.ok(!stageMails(G)[0].text.includes(`[weekly-test] early ${WEEK_STAGES}`));
+    assert.equal(stageMails(H).length, 1);
+    assert.ok(stageMails(H)[0].text.includes(`[weekly-test] early ${WEEK_STAGES}`));
+    assert.equal(stageMails(I).length, 0);
+    assert.ok(summary.skippedNoStageQuestion >= 1);
+    const { data } = await service
+      .from("email_deliveries")
+      .select("id")
+      .eq("user_id", I.id)
+      .in("weekly_question_id", stageQuestionIds);
+    assert.equal(data!.length, 0);
   });
 });
 

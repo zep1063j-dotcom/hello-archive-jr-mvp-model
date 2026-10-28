@@ -108,6 +108,7 @@ Vercel 예정. 아래는 순서이며 각 항목은 실행 후 결과를 SESSION
 4. `supabase/migrations/20261026000200_photos.sql` (사진: `children.photo_path`, `entry_photos`, 비공개 버킷 `photos`와 Storage 정책, D-027). `storage.objects` 정책 생성에서 소유자 권한 오류가 나면 대시보드 Storage → Policies에서 같은 조건(버킷 `photos`, 첫 폴더 = `auth.uid()`)으로 select/insert/delete 정책을 만든다.
 5. `supabase/apply/3_question_change_after_entry.sql` (= 마이그레이션 `20261027000000`: 기록을 쓴 뒤에도 질문 바꾸기 허용, D-034). 정책을 지웠다 다시 만들어 여러 번 실행해도 안전하다. **이 파일을 정식 DB에 적용한 뒤에 앱을 배포(push)한다.**
 6. `supabase/apply/4_product_interests.sql` (= 마이그레이션 `20261028000000`: 제작 탭 관심 표시 테이블, D-036). 여러 번 실행해도 안전하다. **개발 DB로 `npm run test:interests`를 확인한 뒤 정식 DB에 적용하고, 그 다음에 앱을 배포(push)한다.** (적용 전에도 제작 화면은 열리지만 "받아보고 싶어요" 저장은 실패한다.)
+7. `supabase/apply/5_question_stages.sql` (= 마이그레이션 `20261028000100` + 질문 은행 시드 + 주간 질문 시드: 시기별 질문, D-038). 한 파일을 통째로 SQL Editor에 붙여 실행한다(여러 번 실행해도 안전). **개발 DB에서 `npm run test:choices`·`test:weekly-email`을 확인한 뒤 정식 DB에 적용하고, 그 다음에 앱을 배포(push)한다.** 순서를 어기면 홈이 이번 주 질문을 찾지 못해 "질문을 준비하고 있어요"가 뜬다. 적용 뒤에도 이미 기록이 있는 주의 질문 문구는 옛 것으로 남는다.
 적용 뒤 개발 DB에서 `npm run test:choices`, `npm run test:yearly`, `npm run test:photos`를 실행한다(새 마이그레이션이 없으면 실패한다). 정식 DB에는 테스트를 돌리지 않는다.
 
 ## 베타 지표 조회 (SESSION 09, D-023)

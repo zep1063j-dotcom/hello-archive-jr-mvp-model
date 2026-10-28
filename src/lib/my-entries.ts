@@ -1,6 +1,7 @@
 import "server-only";
 import { requireUser } from "@/lib/auth";
 import { todayKst, weekStartOf } from "@/lib/date";
+import { stageAt } from "@/lib/life-stage";
 import { isPastQuestionAnswerable, joinedWeekStart, missedQuestions } from "@/lib/past-questions";
 import { toLikePattern } from "@/lib/entry-search";
 import { applyChoice } from "@/lib/question-choice-rules";
@@ -51,16 +52,18 @@ export function toEntry(row: EntryRow, choice?: QuestionChoice, photos: EntryPho
 }
 
 /**
- * 이번 주 질문 = 오늘(KST)이 속한 주의 월요일(`week_start`)의 질문.
- * 시드가 소진돼 해당 주 질문이 없으면 null (화면이 빈/안내 상태를 보여준다).
+ * 이번 주 질문 = 오늘(KST)이 속한 주의 월요일(`week_start`)에, 그 주 월요일 기준 아이의 시기(`stage`)에 맞는 질문 (D-038).
+ * 시드가 소진돼 해당 주·시기 질문이 없으면 null (화면이 빈/안내 상태를 보여준다).
  */
-export async function getThisWeekQuestion(): Promise<WeeklyQuestion | null> {
+export async function getThisWeekQuestion(child: Child): Promise<WeeklyQuestion | null> {
   await requireUser();
   const supabase = await createClient();
+  const weekStart = weekStartOf(todayKst());
   const { data, error } = await supabase
     .from("weekly_questions")
     .select("id, week_start, body, hint")
-    .eq("week_start", weekStartOf(todayKst()))
+    .eq("week_start", weekStart)
+    .eq("stage", stageAt(child.birthDate, weekStart))
     .maybeSingle();
   if (error) {
     console.error("[questions] 이번 주 질문 조회 실패", error.code);
@@ -195,7 +198,7 @@ export async function getMissedQuestions(
   const [{ data, error }, choices, answered] = await Promise.all([
     supabase
       .from("weekly_questions")
-      .select("id, week_start, body, hint")
+      .select("id, week_start, stage, body, hint")
       .gte("week_start", joined)
       .lt("week_start", thisWeekStart)
       .order("week_start", { ascending: false }),
@@ -206,8 +209,10 @@ export async function getMissedQuestions(
     console.error("[questions] 지난 질문 조회 실패", error.code);
     throw new Error("지난 질문을 불러오지 못했어요.");
   }
+  // 주마다 시기별 질문이 여러 개 있으니, 그 주 월요일 기준 아이의 시기에 맞는 질문만 남긴다 (D-038).
+  const mine = data.filter((row) => row.stage === stageAt(child.birthDate, row.week_start));
   return missedQuestions({
-    questions: data.map((row) => applyChoice(toQuestion(row), choices.get(row.id))),
+    questions: mine.map((row) => applyChoice(toQuestion(row), choices.get(row.id))),
     answeredQuestionIds: new Set(answered.map((entry) => entry.question.id)),
     thisWeekStart,
     joinedWeekStart: joined,
@@ -232,6 +237,7 @@ export async function getPastQuestion(child: Child, weekStart: string): Promise<
     .from("weekly_questions")
     .select("id, week_start, body, hint")
     .eq("week_start", weekStart)
+    .eq("stage", stageAt(child.birthDate, weekStart))
     .maybeSingle();
   if (error) {
     console.error("[questions] 지난 질문 조회 실패", error.code);

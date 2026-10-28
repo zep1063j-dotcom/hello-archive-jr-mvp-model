@@ -78,7 +78,8 @@ select
      where x.week_start = w.week_start and x.on_time
        and exists (select 1 from writes p
                    where p.user_id = x.user_id and p.week_start = w.week_start - 7 and p.on_time)) as retained
-from weeks w
+-- 시기(stage)별 질문이 한 주에 여러 개라 주 단위로 한 줄만 낸다 (D-038)
+from (select distinct week_start from weeks) w
 order by w.week_start desc;
 
 -- ===========================================================================

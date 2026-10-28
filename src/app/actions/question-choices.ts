@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { getMyChild } from "@/lib/children";
+import { stageAt, type LifeStage } from "@/lib/life-stage";
 import { getMyEntries } from "@/lib/my-entries";
 import { pickRandomBankQuestion, validateCustomQuestion } from "@/lib/question-choice-rules";
 import { getMyChoices } from "@/lib/question-choices";
@@ -24,17 +25,24 @@ type WeekContext = {
   userId: string;
   supabase: Supabase;
   week: { id: string; body: string };
+  /** 이번 주 월요일 기준 아이의 시기. 질문 은행도 이 시기의 것만 쓴다 (D-038). */
+  stage: LifeStage;
 };
 
 /** 이번 주 기본 질문을 읽는다. 바꿀 수 없으면 사용자에게 보여줄 문구를 돌려준다. */
 async function loadEditableWeek(): Promise<{ ok: true; ctx: WeekContext } | { ok: false; error: string }> {
   const user = await requireUser();
+  const child = await getMyChild();
+  if (!child) return { ok: false, error: "아이 정보를 먼저 등록해 주세요." };
   const supabase = await createClient();
 
+  const weekStart = weekStartOf(todayKst());
+  const stage = stageAt(child.birthDate, weekStart);
   const { data: week, error } = await supabase
     .from("weekly_questions")
     .select("id, body")
-    .eq("week_start", weekStartOf(todayKst()))
+    .eq("week_start", weekStart)
+    .eq("stage", stage)
     .maybeSingle();
   if (error) {
     console.error("[choices] 이번 주 질문 조회 실패", error.code);
@@ -42,7 +50,7 @@ async function loadEditableWeek(): Promise<{ ok: true; ctx: WeekContext } | { ok
   }
   if (!week) return { ok: false, error: "이번 주 질문이 아직 준비되지 않았어요." };
 
-  return { ok: true, ctx: { userId: user.id, supabase, week } };
+  return { ok: true, ctx: { userId: user.id, supabase, week, stage } };
 }
 
 type ChoiceWrite = { source: "bank"; bankId: string; body: string } | { source: "custom"; body: string };
@@ -103,7 +111,11 @@ export async function shuffleThisWeekQuestion(): Promise<ChoiceActionResult> {
   if (!loaded.ok) return loaded;
   const { ctx } = loaded;
 
-  const { data: bank, error } = await ctx.supabase.from("question_bank").select("id, body");
+  const { data: bank, error } = await ctx.supabase
+    .from("question_bank")
+    .select("id, body")
+    .eq("stage", ctx.stage)
+    .eq("active", true);
   if (error || !bank || bank.length === 0) {
     console.error("[choices] 질문 은행 조회 실패", error?.code ?? "empty");
     return { ok: false, error: FAILED };

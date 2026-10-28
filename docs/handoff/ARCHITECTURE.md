@@ -129,7 +129,7 @@ docs/handoff/     # 인수인계 문서
 - 타임라인 정렬 기준은 `created_at desc`. 기간 묶음은 달력 월·분기·연 고정 구간을 KST 반개구간 `[start, end)`로 정의하고 `created_at`의 KST 날짜로 소속을 정한다 (`src/lib/chapters.ts`, D-021).
 
 ### 세션 09 추가 테이블 (SQL은 `supabase/migrations/20261026000*`, 결정 D-025~D-027)
-- `question_bank`(읽기 전용 예시 질문), `week_question_choices`(부모·주별 질문 바꾸기, 기록이 있으면 RLS가 변경 차단), `yearly_answers`(자녀·연도·질문 키별 답), `entry_photos`(기록당 3장, 경로만), `product_interests`(부모·상품 `pdf`/`book`당 1행, 제작 관심 표시, 수정 없음), `children.photo_path`, `entries unique (id, user_id)`. 사진 파일은 비공개 Storage 버킷 `photos`(`<부모 id>/<파일>`), 보여줄 때 서명 URL.
+- `question_bank`(읽기 전용 예시 질문), `week_question_choices`(부모·주별 질문 바꾸기, 기록이 있으면 RLS가 변경 차단), `yearly_answers`(자녀·연도·질문 키별 답), `entry_photos`(기록당 3장, 경로만), `weekly_questions.stage`·`question_bank.stage/active`(시기별 질문, D-038; 유니크 `(week_start, stage)`), `product_interests`(부모·상품 `pdf`/`book`당 1행, 제작 관심 표시, 수정 없음), `children.photo_path`, `entries unique (id, user_id)`. 사진 파일은 비공개 Storage 버킷 `photos`(`<부모 id>/<파일>`), 보여줄 때 서명 URL.
 
 ### email_deliveries
 | 컬럼 | 타입 | 비고 |

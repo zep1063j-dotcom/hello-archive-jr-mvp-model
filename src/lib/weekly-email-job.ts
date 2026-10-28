@@ -4,6 +4,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/database.ts";
 import { toKstDateKey, weekStartOf } from "./date.ts";
+import { stageAt, type LifeStage } from "./life-stage.ts";
 import { buildUnsubscribeUrl } from "./unsubscribe.ts";
 import {
   buildWeeklyEmail,
@@ -28,6 +29,8 @@ export type WeeklyEmailSummary = {
   skippedDone: number;
   skippedExhausted: number;
   skippedInProgress: number;
+  /** 자녀의 시기(유년·아동 등)에 맞는 이번 주 질문이 아직 없어서 보내지 않은 부모 (D-038) */
+  skippedNoStageQuestion: number;
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -59,18 +62,23 @@ export async function runWeeklyEmailJob(options: {
     skippedDone: 0,
     skippedExhausted: 0,
     skippedInProgress: 0,
+    skippedNoStageQuestion: 0,
   };
 
   // 월요일 발송 시각 전에는 보내지 않는다 (수동 호출 방지).
   if (now.getTime() < sendAt.getTime()) return { ...summary, status: "too_early" };
 
-  const { data: question, error: questionError } = await db
+  // 같은 주에도 시기별 질문이 따로 있다. 부모마다 자녀의 시기에 맞는 질문을 보낸다 (D-038).
+  const { data: weekQuestions, error: questionError } = await db
     .from("weekly_questions")
-    .select("id, body, hint")
-    .eq("week_start", weekStart)
-    .maybeSingle();
+    .select("id, stage, body, hint")
+    .eq("week_start", weekStart);
   if (questionError) throw new Error(`question_query_${questionError.code}`);
-  if (!question) return { ...summary, status: "no_question" };
+  if (weekQuestions.length === 0) return { ...summary, status: "no_question" };
+  const questionByStage = new Map<LifeStage, (typeof weekQuestions)[number]>(
+    weekQuestions.map((row) => [row.stage, row]),
+  );
+  const questionIds = weekQuestions.map((row) => row.id);
 
   // 동의한 부모 → 자녀가 있는 부모 → 대상
   const { data: consenting, error: settingsError } = await db
@@ -83,21 +91,21 @@ export async function runWeeklyEmailJob(options: {
 
   const consentingIds = consenting.map((row) => row.user_id);
   const [children, entries, deliveries] = await Promise.all([
-    db.from("children").select("user_id").in("user_id", consentingIds),
-    db.from("entries").select("user_id").eq("weekly_question_id", question.id).in("user_id", consentingIds),
+    db.from("children").select("user_id, birth_date").in("user_id", consentingIds),
+    db.from("entries").select("user_id, weekly_question_id").in("weekly_question_id", questionIds).in("user_id", consentingIds),
     db
       .from("email_deliveries")
-      .select("id, user_id, status, attempts, last_attempt_at")
-      .eq("weekly_question_id", question.id)
+      .select("id, user_id, weekly_question_id, status, attempts, last_attempt_at")
+      .in("weekly_question_id", questionIds)
       .in("user_id", consentingIds),
   ]);
   if (children.error) throw new Error(`children_query_${children.error.code}`);
   if (entries.error) throw new Error(`entries_query_${entries.error.code}`);
   if (deliveries.error) throw new Error(`deliveries_query_${deliveries.error.code}`);
 
-  const withChild = new Set(children.data.map((row) => row.user_id));
-  const wroteThisWeek = new Set(entries.data.map((row) => row.user_id));
-  const deliveryByUser = new Map(deliveries.data.map((row) => [row.user_id, row]));
+  const birthDateByUser = new Map(children.data.map((row) => [row.user_id, row.birth_date]));
+  const wroteKeys = new Set(entries.data.map((row) => `${row.user_id}:${row.weekly_question_id}`));
+  const deliveryByKey = new Map(deliveries.data.map((row) => [`${row.user_id}:${row.weekly_question_id}`, row]));
 
   let firstSend = true;
   for (const setting of consenting) {
@@ -106,7 +114,7 @@ export async function runWeeklyEmailJob(options: {
       !isEligible({
         emailConsent: setting.email_consent,
         consentUpdatedAt: setting.consent_updated_at,
-        hasChild: withChild.has(userId),
+        hasChild: birthDateByUser.has(userId),
         sendAt,
       })
     ) {
@@ -114,7 +122,13 @@ export async function runWeeklyEmailJob(options: {
     }
     summary.eligible += 1;
 
-    const existing = deliveryByUser.get(userId) ?? null;
+    const question = questionByStage.get(stageAt(birthDateByUser.get(userId)!, weekStart));
+    if (!question) {
+      summary.skippedNoStageQuestion += 1;
+      continue;
+    }
+    const wroteThisWeek = wroteKeys.has(`${userId}:${question.id}`);
+    const existing = deliveryByKey.get(`${userId}:${question.id}`) ?? null;
     const decision = decideDelivery(
       existing && {
         status: existing.status,
@@ -131,7 +145,7 @@ export async function runWeeklyEmailJob(options: {
     }
 
     // 이미 이번 주 기록을 남겼으면 보내지 않고 기록만 남긴다.
-    if (wroteThisWeek.has(userId) && !existing) {
+    if (wroteThisWeek && !existing) {
       const { error } = await db.from("email_deliveries").insert({
         user_id: userId,
         weekly_question_id: question.id,
@@ -141,7 +155,7 @@ export async function runWeeklyEmailJob(options: {
       summary.skippedAlreadyWrote += 1;
       continue;
     }
-    if (wroteThisWeek.has(userId)) {
+    if (wroteThisWeek) {
       summary.skippedAlreadyWrote += 1;
       continue;
     }

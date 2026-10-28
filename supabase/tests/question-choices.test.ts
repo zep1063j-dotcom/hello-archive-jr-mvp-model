@@ -1,6 +1,6 @@
 // 질문 은행·이번 주 질문 바꾸기 검증 (D-025). 실행: npm run test:choices
 // src/app/actions/question-choices.ts 가 쓰는 쿼리 모양을 서로 다른 두 부모 계정으로 실행한다.
-// 필요: 마이그레이션 20261026000000·20261027000000 과 supabase/seed/question_bank.sql 이 적용된 개발용 프로젝트.
+// 필요: 마이그레이션 20261026000000·20261027000000·20261028000100 과 supabase/seed/question_bank.sql 이 적용된 개발용 프로젝트.
 // 임시 사용자·임시 질문(2020년 월요일)을 만들고 끝나면 지운다 (service role 키 사용).
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
@@ -59,7 +59,7 @@ describe("질문 은행·이번 주 질문 바꾸기 (두 부모 계정)", () =>
     }
     A = await createTestUser("a");
     B = await createTestUser("b");
-    const bank = await A.client.from("question_bank").select("id, body").limit(1).single();
+    const bank = await A.client.from("question_bank").select("id, body").eq("active", true).limit(1).single();
     assert.ifError(bank.error);
     bankId = bank.data!.id;
     bankBody = bank.data!.body;
@@ -71,10 +71,17 @@ describe("질문 은행·이번 주 질문 바꾸기 (두 부모 계정)", () =>
     await service.from("weekly_questions").delete().in("id", weekIds);
   });
 
-  it("질문 은행은 로그인한 부모가 100개 이상 읽을 수 있고 쓸 수는 없다", async () => {
-    const count = await A.client.from("question_bank").select("id", { count: "exact", head: true });
-    assert.ifError(count.error);
-    assert.ok((count.count ?? 0) >= 100, `은행 질문 ${count.count}개 — question_bank.sql 시드가 필요하다`);
+  it("질문 은행은 로그인한 부모가 시기마다 읽을 수 있고(유년·아동 68개, 청소년·청년 26개 이상) 쓸 수는 없다", async () => {
+    const minimum = { early: 68, child: 68, teen: 26, young: 26 } as const;
+    for (const [stage, expected] of Object.entries(minimum) as [keyof typeof minimum, number][]) {
+      const count = await A.client
+        .from("question_bank")
+        .select("id", { count: "exact", head: true })
+        .eq("stage", stage)
+        .eq("active", true);
+      assert.ifError(count.error);
+      assert.ok((count.count ?? 0) >= expected, `${stage} 은행 질문 ${count.count}개 — question_bank.sql 시드가 필요하다`);
+    }
     const insert = await A.client.from("question_bank").insert({ body: "내가 만든 은행 질문" });
     assert.ok(insert.error, "은행 쓰기는 막혀야 한다");
   });

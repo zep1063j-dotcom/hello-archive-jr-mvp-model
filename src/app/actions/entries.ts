@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getMyChild } from "@/lib/children";
 import { validateEntryBody } from "@/lib/entry-validation";
+import { stageAt } from "@/lib/life-stage";
 import { getThisWeekQuestion } from "@/lib/my-entries";
 import { isPastQuestionAnswerable, joinedWeekStart } from "@/lib/past-questions";
 import { PHOTO_BUCKET } from "@/lib/photo-rules";
@@ -124,7 +125,7 @@ export async function saveThisWeekEntry(input: {
     return { ok: false, error: "아이 정보를 먼저 등록해 주세요. 홈에서 다시 시작할 수 있어요." };
   }
 
-  const question = await getThisWeekQuestion();
+  const question = await getThisWeekQuestion(child);
   if (!question) {
     return { ok: false, error: "이번 주 질문이 아직 준비되지 않았어요." };
   }
@@ -161,15 +162,17 @@ export async function savePastEntry(input: {
   const supabase = await createClient();
   const { data: question, error } = await supabase
     .from("weekly_questions")
-    .select("id, week_start")
+    .select("id, week_start, stage")
     .eq("id", input.weeklyQuestionId)
     .maybeSingle();
   if (error) {
     console.error("[entries] 질문 확인 실패", error.code);
     return { ok: false, error: SAVE_FAILED };
   }
+  // 아이의 그 주 시기에 맞는 질문에만 쓸 수 있다 (D-038). 다른 시기의 질문 id를 보내도 막는다.
   const answerable =
     question &&
+    question.stage === stageAt(child.birthDate, question.week_start) &&
     isPastQuestionAnswerable({
       questionWeekStart: question.week_start,
       thisWeekStart: weekStartOf(todayKst()),

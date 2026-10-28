@@ -106,6 +106,7 @@ export function buildWeeklyEmail(input: {
   const html = `<div style="font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111;line-height:1.7">
 <p style="font-size:13px;color:#555;margin:0 0 8px">Hello Archive jr · 이번 주 질문</p>
 <p style="font-size:20px;font-weight:700;margin:0 0 12px">${question}</p>
+<p style="font-size:14px;color:#555;margin:0 0 8px">아이에게 직접 물어보고, 대답을 들은 그대로 적어 주세요.</p>
 ${hint ? `<p style="font-size:14px;color:#555;margin:0 0 20px">${hint}</p>` : ""}
 <p style="margin:24px 0"><a href="${writeUrl}" style="display:inline-block;background:#d92f3e;color:#fff;text-decoration:none;padding:12px 20px;font-weight:600">기록 남기러 가기</a></p>
 <p style="font-size:13px;color:#555;margin:0 0 4px">한두 줄만 적어도 첫 기록이 돼요. 이번 주 일요일까지 남길 수 있어요.</p>
@@ -116,6 +117,8 @@ ${hint ? `<p style="font-size:14px;color:#555;margin:0 0 20px">${hint}</p>` : ""
     "이번 주 질문이 도착했어요",
     "",
     input.questionBody,
+    "",
+    "아이에게 직접 물어보고, 대답을 들은 그대로 적어 주세요.",
     ...(input.hint ? ["", input.hint] : []),
     "",
     `기록 남기러 가기: ${writeUrl}`,

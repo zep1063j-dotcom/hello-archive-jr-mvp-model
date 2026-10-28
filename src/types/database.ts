@@ -5,6 +5,8 @@
 
 export type EmailDeliveryStatus = "processing" | "sent" | "failed" | "skipped";
 export type QuestionChoiceSource = "bank" | "custom";
+/** 아이의 시기 (D-038): 유년 만 0~6 / 아동 7~12 / 청소년 13~18 / 청년 19 이상 */
+export type LifeStageKey = "early" | "child" | "teen" | "young";
 
 export type Database = {
   public: {
@@ -42,18 +44,21 @@ export type Database = {
           id: string;
           /** 한국 시간 기준 월요일 YYYY-MM-DD */
           week_start: string;
+          /** 같은 주에도 시기마다 질문이 하나씩 있다 (D-038) */
+          stage: LifeStageKey;
           body: string;
           hint: string | null;
         };
         // 읽기 전용(시드로만 관리). 클라이언트 쓰기 권한이 없다.
-        Insert: { week_start: string; body: string; hint?: string | null };
+        Insert: { week_start: string; stage?: LifeStageKey; body: string; hint?: string | null };
         Update: { body?: string; hint?: string | null };
         Relationships: [];
       };
       question_bank: {
-        Row: { id: string; body: string; created_at: string };
+        // active=false 는 예전 예시 질문이라 "바꾸기"에서 뽑지 않는다 (D-038)
+        Row: { id: string; stage: LifeStageKey; active: boolean; body: string; created_at: string };
         // 읽기 전용(시드로만 관리). 클라이언트 쓰기 권한이 없다.
-        Insert: { body: string };
+        Insert: { stage?: LifeStageKey; body: string };
         Update: { body?: string };
         Relationships: [];
       };

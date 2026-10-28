@@ -58,7 +58,7 @@ async function WriteContent({
   }
 
   const [question, entries] = await Promise.all([
-    getThisWeekQuestion(),
+    getThisWeekQuestion(child),
     getMyEntries(child.id),
   ]);
 

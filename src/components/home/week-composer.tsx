@@ -188,6 +188,11 @@ export function WeekComposer({
             </button>
           )}
         </div>
+        {!hasEntry && questionSource !== "custom" && (
+          <p className="mt-3 text-[13px] font-semibold text-ink-soft">
+            아이에게 직접 물어보고, 대답을 들은 그대로 적어 주세요.
+          </p>
+        )}
         {!hasEntry && questionHint && (
           <p className="mt-3 text-sm leading-relaxed text-ink-soft">{questionHint}</p>
         )}
