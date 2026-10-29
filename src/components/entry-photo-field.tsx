@@ -16,29 +16,35 @@ export function useEntryPhotos(existing: EntryPhoto[]) {
   const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // 비동기 업로드·정리 코드가 최신 대기 목록을 읽도록 ref에 복사해 둔다(렌더 중에는 쓰지 않는다).
+  // 비동기 작업도 같은 최신 대기 목록을 본다. 이벤트 처리 중 ref와 화면 상태를 함께 갱신한다.
   const queuedRef = useRef<Queued[]>([]);
-  useEffect(() => {
-    queuedRef.current = queued;
-  }, [queued]);
+  const busyRef = useRef(false);
+  const mountedRef = useRef(true);
+  function replaceQueued(next: Queued[]) {
+    queuedRef.current = next;
+    setQueued(next);
+  }
 
-  // 화면을 떠날 때 미리보기 주소를 해제한다.
-  useEffect(
-    () => () => {
+  // 화면을 떠날 때 미리보기 주소를 해제한다. 사진을 읽는 도중 떠나도 새 주소를 남기지 않는다.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
       queuedRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
-    },
-    [],
-  );
+      queuedRef.current = [];
+    };
+  }, []);
 
   const visibleExisting = existing.filter((photo) => !removedIds.includes(photo.id));
   const remaining = MAX_PHOTOS_PER_ENTRY - visibleExisting.length - queued.length;
 
   async function addFiles(files: FileList | null) {
-    if (!files || files.length === 0 || busy) return;
+    if (!files || files.length === 0 || busyRef.current) return;
+    busyRef.current = true;
     setError(null);
     setBusy(true);
+    const next: Queued[] = [];
     try {
-      const next: Queued[] = [];
       let slots = remaining;
       for (const file of Array.from(files)) {
         if (slots <= 0) {
@@ -46,27 +52,33 @@ export function useEntryPhotos(existing: EntryPhoto[]) {
           break;
         }
         const blob = await resizeEntryPhoto(file);
+        if (!mountedRef.current) break;
         next.push({ key: crypto.randomUUID(), blob, previewUrl: URL.createObjectURL(blob) });
         slots -= 1;
       }
-      setQueued((current) => [...current, ...next]);
     } catch (caught) {
-      setError(caught instanceof ImageResizeError ? caught.message : "사진을 불러오지 못했어요.");
+      if (mountedRef.current) setError(caught instanceof ImageResizeError ? caught.message : "사진을 불러오지 못했어요.");
     } finally {
-      setBusy(false);
+      // 뒤 사진을 열지 못해도 앞서 고른 사진과 미리보기 주소를 잃지 않는다.
+      if (mountedRef.current) {
+        replaceQueued([...queuedRef.current, ...next]);
+        setBusy(false);
+      } else {
+        next.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      }
+      busyRef.current = false;
     }
   }
 
   function removeQueued(key: string) {
-    setQueued((current) => {
-      const target = current.find((item) => item.key === key);
-      if (target) URL.revokeObjectURL(target.previewUrl);
-      return current.filter((item) => item.key !== key);
-    });
+    const target = queuedRef.current.find((item) => item.key === key);
+    if (target) URL.revokeObjectURL(target.previewUrl);
+    replaceQueued(queuedRef.current.filter((item) => item.key !== key));
   }
 
   async function removeExisting(photoId: string) {
-    if (busy) return;
+    if (busyRef.current) return;
+    busyRef.current = true;
     setError(null);
     setBusy(true);
     try {
@@ -76,6 +88,7 @@ export function useEntryPhotos(existing: EntryPhoto[]) {
     } catch {
       setError("사진을 지우지 못했어요. 잠시 후 다시 눌러 주세요.");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
@@ -106,7 +119,7 @@ export function useEntryPhotos(existing: EntryPhoto[]) {
 
   function reset() {
     queuedRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
-    setQueued([]);
+    replaceQueued([]);
     setRemovedIds([]);
     setError(null);
   }

@@ -174,10 +174,9 @@ export async function savePastEntry(input: {
     console.error("[entries] 질문 확인 실패", error.code);
     return { ok: false, error: SAVE_FAILED };
   }
-  // 아이의 그 주 시기에 맞는 질문에만 쓸 수 있다 (D-038). 다른 시기의 질문 id를 보내도 막는다.
+  // 새 기록은 아이의 그 주 시기에 맞아야 한다. 기존 기록은 저장 당시 질문으로 계속 수정한다 (D-039).
   const answerable =
     question &&
-    question.stage === stageAt(child.birthDate, question.week_start) &&
     isPastQuestionAnswerable({
       questionWeekStart: question.week_start,
       thisWeekStart: weekStartOf(todayKst()),
@@ -185,6 +184,19 @@ export async function savePastEntry(input: {
     });
   if (!question || !answerable) {
     return { ok: false, error: "이 질문에는 지금 기록을 남길 수 없어요." };
+  }
+
+  if (question.stage !== stageAt(child.birthDate, question.week_start)) {
+    // 생년월일 수정 등으로 현재 시기가 달라진 경우에도 내 기존 기록만 수정할 수 있다.
+    let existing: Awaited<ReturnType<typeof findWeekEntry>>;
+    try {
+      existing = await findWeekEntry(supabase, user.id, child.id, question.week_start);
+    } catch {
+      return { ok: false, error: SAVE_FAILED };
+    }
+    if (existing?.question.id !== question.id) {
+      return { ok: false, error: "이 질문에는 지금 기록을 남길 수 없어요." };
+    }
   }
 
   return saveEntryForQuestion(user.id, child.id, { id: question.id, weekStart: question.week_start }, parsed.value);

@@ -65,6 +65,12 @@ describe("지난 질문 쓰기 규칙", () => {
     assert.deepEqual(missed.map((q) => q.id), ["child-1026"]);
   });
 
+  it("달력에 없는 날짜나 월요일이 아닌 날짜는 지난 질문으로 조회하지 않는다", () => {
+    for (const date of ["2026-02-30", "2026-00-01", "2026-10-20", "invalid", "2026-1-5"]) {
+      assert.equal(isPastQuestionAnswerable({ questionWeekStart: date, thisWeekStart: "2026-10-26", joinedWeekStart: "2026-01-01" }), false);
+    }
+  });
+
   it("가입 주에는 놓친 질문이 없다", () => {
     const missed = missedQuestions({
       questions: [{ id: "a", weekStart: "2026-10-19" }],

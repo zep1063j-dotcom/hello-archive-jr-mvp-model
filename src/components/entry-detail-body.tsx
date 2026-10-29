@@ -44,6 +44,7 @@ export function EntryDetailBody({
     else writeDraft(key, next);
   }
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // 삭제는 폼 액션이다. 성공하면 서버가 아카이브로 이동시키고, 실패하면 상태로 오류 문구를 돌려받는다.
@@ -69,7 +70,8 @@ export function EntryDetailBody({
 
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending || !canSubmitBody(draft)) return; // 저장 중 중복 제출 방지
+    if (pending || savingRef.current || !canSubmitBody(draft)) return; // 같은 틱의 연속 제출도 막는다
+    savingRef.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -94,6 +96,7 @@ export function EntryDetailBody({
     } catch {
       setError(SAVE_ERROR);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
@@ -138,6 +141,7 @@ export function EntryDetailBody({
               // 고치던 내용을 버리고 저장된 원본을 그대로 둔다
               setTyped(null);
               removeDraft(key);
+              photos.reset();
               setMode("view");
               setError(null);
             }}

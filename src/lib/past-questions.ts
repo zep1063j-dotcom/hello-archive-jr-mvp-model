@@ -3,6 +3,7 @@
 //  - 이번 주 질문은 기존 흐름(saveThisWeekEntry)이 다루고, 미래 질문은 쓸 수 없다
 //  - 등록 전에 지나간 질문은 "놓친" 것이 아니므로 권하지 않는다(가입 직후 12주치 숙제가 쌓이는 것을 막는다)
 import { toKstDateKey, weekStartOf } from "./date.ts";
+import { isValidDateKey } from "./child-validation.ts";
 
 /** 자녀 등록 시각(timestamptz) → 그 주의 월요일(KST). 이 주부터 지난 질문을 쓸 수 있다. */
 export function joinedWeekStart(childCreatedAtIso: string): string {
@@ -16,6 +17,8 @@ export function isPastQuestionAnswerable(input: {
   joinedWeekStart: string;
 }): boolean {
   return (
+    isValidDateKey(input.questionWeekStart) &&
+    weekStartOf(input.questionWeekStart) === input.questionWeekStart &&
     input.questionWeekStart < input.thisWeekStart &&
     input.questionWeekStart >= input.joinedWeekStart
   );

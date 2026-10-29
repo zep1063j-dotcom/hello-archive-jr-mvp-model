@@ -104,8 +104,14 @@ export async function runWeeklyEmailJob(options: {
   if (deliveries.error) throw new Error(`deliveries_query_${deliveries.error.code}`);
 
   const birthDateByUser = new Map(children.data.map((row) => [row.user_id, row.birth_date]));
-  const wroteKeys = new Set(entries.data.map((row) => `${row.user_id}:${row.weekly_question_id}`));
-  const deliveryByKey = new Map(deliveries.data.map((row) => [`${row.user_id}:${row.weekly_question_id}`, row]));
+  // 시기별 질문 행이 달라도 같은 주에 썼거나 이미 보낸 부모는 다시 안내하지 않는다 (D-039).
+  const wroteUsers = new Set(entries.data.map((row) => row.user_id));
+  const deliveryByUser = new Map<string, (typeof deliveries.data)[number]>();
+  const priority = { sent: 4, skipped: 3, processing: 2, failed: 1 };
+  for (const row of deliveries.data) {
+    const current = deliveryByUser.get(row.user_id);
+    if (!current || priority[row.status] > priority[current.status]) deliveryByUser.set(row.user_id, row);
+  }
 
   let firstSend = true;
   for (const setting of consenting) {
@@ -122,13 +128,16 @@ export async function runWeeklyEmailJob(options: {
     }
     summary.eligible += 1;
 
-    const question = questionByStage.get(stageAt(birthDateByUser.get(userId)!, weekStart));
+    const existing = deliveryByUser.get(userId) ?? null;
+    // 재시도도 원래 발송 행을 이어 쓴다. 생년월일 수정으로 시기가 달라져도 별도의 메일을 만들지 않는다.
+    const question = existing
+      ? weekQuestions.find((row) => row.id === existing.weekly_question_id)
+      : questionByStage.get(stageAt(birthDateByUser.get(userId)!, weekStart));
     if (!question) {
       summary.skippedNoStageQuestion += 1;
       continue;
     }
-    const wroteThisWeek = wroteKeys.has(`${userId}:${question.id}`);
-    const existing = deliveryByKey.get(`${userId}:${question.id}`) ?? null;
+    const wroteThisWeek = wroteUsers.has(userId);
     const decision = decideDelivery(
       existing && {
         status: existing.status,

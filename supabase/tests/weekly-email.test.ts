@@ -267,6 +267,29 @@ describe("주간 이메일 발송 작업 (실제 DB + 가짜 발송기)", () => 
       .in("weekly_question_id", stageQuestionIds);
     assert.equal(data!.length, 0);
   });
+  it("생년월일을 고쳐 시기가 달라져도 그 주에 이미 보낸 메일은 다시 보내지 않는다", async () => {
+    const before = stageMails(H).length;
+    const updated = await service.from("children").update({ birth_date: DEFAULT_BIRTH }).eq("user_id", H.id);
+    assert.ifError(updated.error);
+    await run(`${WEEK_STAGES}T21:00:00+09:00`);
+    assert.equal(stageMails(H).length, before);
+    const rows = await service.from("email_deliveries").select("id").eq("user_id", H.id).in("weekly_question_id", stageQuestionIds);
+    assert.ifError(rows.error);
+    assert.equal(rows.data!.length, 1);
+  });
+
+  it("현재 시기와 다른 질문 행에 기록한 주에도 안내 메일을 보내지 않는다", async () => {
+    const parent = await createTestUser("other-stage-wrote", { consent: true, child: true });
+    userIds.push(parent.id);
+    const written = await service.from("entries").insert({ user_id: parent.id, child_id: parent.childId!, weekly_question_id: stageQuestionIds[1], body: "다른 시기 질문으로 이미 썼어요" });
+    assert.ifError(written.error);
+    await run(`${WEEK_STAGES}T22:00:00+09:00`);
+    assert.equal(stageMails(parent).length, 0);
+    const rows = await service.from("email_deliveries").select("status").eq("user_id", parent.id).in("weekly_question_id", stageQuestionIds);
+    assert.ifError(rows.error);
+    assert.deepEqual(rows.data!.map((row) => row.status), ["skipped"]);
+  });
+
 });
 
 describe("수신 동의 저장 (사용자 세션, 앱과 같은 쿼리)", () => {

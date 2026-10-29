@@ -113,6 +113,7 @@ export function WeekComposer({
     if (hasEntry) {
       setTyped(null);
       removeDraft(key);
+      photos.reset();
     }
   }
 
@@ -387,7 +388,7 @@ export function WeekComposer({
             <button
               type="button"
               onClick={closeEditor}
-              disabled={status === "saving"}
+              disabled={status === "saving" || photos.busy}
               className="min-h-12 border border-ink/30 px-4 text-sm hover:border-ink hover:bg-sheet disabled:opacity-40 rounded-xl"
             >
               {hasEntry ? "취소" : "닫기"}
