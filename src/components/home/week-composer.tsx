@@ -186,7 +186,7 @@ export function WeekComposer({
   const canChangeQuestion = !past && status !== "saving" && (hasEntry ? editingEntry && questionEditOpen : true);
 
   return (
-    <section aria-labelledby="this-week" className="rounded-3xl border border-blush-deep bg-blush text-ink">
+    <section aria-labelledby="this-week" className="journal-composer text-ink">
       <div className={`px-5 pt-6 md:px-7 ${hasEntry && !open ? "pb-3" : "pb-5"}`}>
         <p
           id="this-week"
@@ -194,7 +194,7 @@ export function WeekComposer({
         >
           <span
             aria-hidden
-            className={`size-1.5 rounded-full ${hasEntry ? "bg-ink-mute" : "animate-pulse bg-brand"}`}
+            className={`h-px w-5 ${hasEntry ? "bg-ink-mute" : "bg-brand"}`}
           />
           {formatWeekLabel(question.weekStart)} ·{" "}
           {hasEntry
@@ -212,8 +212,8 @@ export function WeekComposer({
           <h2
             className={
               hasEntry
-                ? "min-w-0 flex-1 text-[0.9375rem] leading-relaxed font-medium text-brand-deep"
-                : "min-w-0 flex-1 font-serif text-[1.5rem] leading-[1.55] font-semibold md:text-[1.75rem]"
+                ? "min-w-0 flex-1 text-[0.8125rem] leading-relaxed font-normal text-ink-soft"
+                : "min-w-0 flex-1 font-serif text-[1.625rem] leading-[1.6] font-normal tracking-[-0.04em] md:text-[2rem]"
             }
           >
             {questionBody}
@@ -263,7 +263,7 @@ export function WeekComposer({
               onClick={() => setCustomOpen((value) => !value)}
               disabled={choiceBusy}
               aria-expanded={customOpen}
-              className="flex min-h-10 items-center gap-1.5 border border-ink/40 bg-sheet px-3 font-semibold text-ink hover:border-ink disabled:opacity-60 rounded-xl"
+              className="flex min-h-10 items-center gap-1.5 border border-ink/40 bg-sheet px-3 font-semibold text-ink hover:border-ink disabled:opacity-60 rounded-[2px]"
             >
               <span aria-hidden>✎</span>
               직접 질문 쓰기
@@ -307,20 +307,20 @@ export function WeekComposer({
               maxLength={CUSTOM_QUESTION_MAX_LENGTH}
               onChange={(event) => setCustomText(event.target.value)}
               placeholder="예: 요즘 아이가 가장 좋아하는 놀이는?"
-              className="min-h-12 border border-ink/40 bg-paper px-4 focus:border-ink rounded-xl"
+              className="min-h-12 border border-ink/40 bg-paper px-4 focus:border-ink rounded-[2px]"
             />
             <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={choiceBusy || customText.trim().length === 0}
-                className="min-h-11 flex-1 border border-ink px-4 text-sm font-semibold hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-40 rounded-xl"
+                className="min-h-11 flex-1 border border-ink px-4 text-sm font-semibold hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-40 rounded-[2px]"
               >
                 이 질문으로 쓰기
               </button>
               <button
                 type="button"
                 onClick={() => setCustomOpen(false)}
-                className="min-h-11 border border-ink/30 px-4 text-sm hover:border-ink hover:bg-sheet rounded-xl"
+                className="min-h-11 border border-ink/30 px-4 text-sm hover:border-ink hover:bg-sheet rounded-[2px]"
               >
                 취소
               </button>
@@ -371,7 +371,7 @@ export function WeekComposer({
               type="button"
               onClick={() => setQuestionEditOpen((value) => !value)}
               aria-expanded={questionEditOpen}
-              className="self-start rounded-lg py-2 text-[13px] text-ink-soft underline underline-offset-4 hover:text-brand"
+              className="self-start rounded-[2px] py-2 text-[13px] text-ink-soft underline underline-offset-4 hover:text-brand"
             >
               {questionEditOpen ? "질문 바꾸기 닫기" : "질문도 바꾸기"}
             </button>
@@ -380,7 +380,7 @@ export function WeekComposer({
             <button
               type="submit"
               disabled={!canSubmit}
-              className="flex min-h-12 flex-1 items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-brand rounded-xl"
+              className="flex min-h-12 flex-1 items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-brand rounded-[2px]"
             >
               {status === "saving" ? "저장하는 중…" : hasEntry ? "수정 저장" : "저장하기"}
               <span aria-hidden>↗</span>
@@ -389,7 +389,7 @@ export function WeekComposer({
               type="button"
               onClick={closeEditor}
               disabled={status === "saving" || photos.busy}
-              className="min-h-12 border border-ink/30 px-4 text-sm hover:border-ink hover:bg-sheet disabled:opacity-40 rounded-xl"
+              className="min-h-12 border border-ink/30 px-4 text-sm hover:border-ink hover:bg-sheet disabled:opacity-40 rounded-[2px]"
             >
               {hasEntry ? "취소" : "닫기"}
             </button>
@@ -397,7 +397,7 @@ export function WeekComposer({
         </form>
       ) : shownBody !== null ? (
         <div className="flex flex-col gap-4 px-5 pb-5 md:px-7">
-          <p className="line-clamp-6 font-serif text-[1.375rem] leading-[1.75] font-medium whitespace-pre-wrap text-ink md:text-[1.5rem]">
+          <p className="line-clamp-6 font-serif text-[1.5rem] leading-[1.85] font-normal tracking-[-0.025em] whitespace-pre-wrap text-ink md:text-[1.5rem]">
             {shownBody}
           </p>
           <PhotoStrip photos={entry?.photos ?? []} />
@@ -413,7 +413,7 @@ export function WeekComposer({
                 <Link
                   href={`/archive/${entry.id}`}
                   transitionTypes={["nav-forward"]}
-                  className="grid min-h-10 place-items-center rounded-lg px-3 text-sm whitespace-nowrap text-ink-soft underline underline-offset-4 hover:text-brand"
+                  className="grid min-h-10 place-items-center rounded-[2px] px-3 text-sm whitespace-nowrap text-ink-soft underline underline-offset-4 hover:text-brand"
                 >
                   다시 보기
                 </Link>
@@ -421,7 +421,7 @@ export function WeekComposer({
               <button
                 type="button"
                 onClick={startWriting}
-                className="min-h-10 rounded-lg border border-ink/30 px-4 text-sm whitespace-nowrap text-ink hover:border-ink hover:bg-sheet"
+                className="min-h-10 rounded-[2px] border border-ink/30 px-4 text-sm whitespace-nowrap text-ink hover:border-ink hover:bg-sheet"
               >
                 수정하기
               </button>
@@ -433,7 +433,7 @@ export function WeekComposer({
           <button
             type="button"
             onClick={startWriting}
-            className="group flex min-h-14 w-full items-center justify-between gap-3 border border-blush-deep bg-sheet px-4 text-left text-ink transition-colors hover:border-brand rounded-xl"
+            className="group flex min-h-14 w-full items-center justify-between gap-3 border-b border-line bg-transparent px-1 text-left text-ink transition-colors hover:border-brand rounded-[2px]"
           >
             <span
               className={`line-clamp-1 font-serif ${draftPreview ? "" : "text-ink-mute"}`}
@@ -442,7 +442,7 @@ export function WeekComposer({
             </span>
             <span
               aria-hidden
-              className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand text-white transition-transform group-hover:rotate-12"
+              className="grid size-8 shrink-0 place-items-center text-brand transition-transform group-hover:rotate-12"
             >
               ✎
             </span>

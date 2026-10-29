@@ -17,10 +17,10 @@ export function WeekStrip({
   onSelect: (entryId: string) => void;
 }) {
   return (
-    <ol className="grid auto-cols-[minmax(0,3.25rem)] grid-flow-col gap-1.5">
+    <ol className="grid auto-cols-fr grid-flow-col gap-1">
       {weeks.map((week) => {
         const label = week.isCurrent ? "이번 주" : formatMonthDay(week.weekStart);
-        const base = "flex h-12 w-full items-center justify-center rounded-xl text-sm transition-all";
+        const base = "flex h-11 w-full items-center justify-center border-b text-sm transition-colors";
         return (
           <li key={week.weekStart} className="flex flex-col items-center gap-1.5">
             {week.entry ? (
@@ -28,7 +28,7 @@ export function WeekStrip({
                 type="button"
                 onClick={() => week.entry && onSelect(week.entry.id)}
                 aria-label={`${formatMonthDay(week.weekStart)} 주 기록 보기`}
-                className={`${base} bg-brand text-white hover:-translate-y-0.5 hover:bg-brand-deep`}
+                className={`${base} border-brand bg-transparent font-serif text-lg text-brand hover:bg-blush`}
               >
                 ✓
               </button>
@@ -36,7 +36,7 @@ export function WeekStrip({
               <Link
                 href={`/write?week=${week.weekStart}`}
                 aria-label={`${formatMonthDay(week.weekStart)} 주 질문에 기록 남기기`}
-                className={`${base} border border-dashed border-brand text-brand hover:bg-blush`}
+                className={`${base} border-brand/40 text-brand hover:bg-blush`}
               >
                 +
               </Link>
@@ -45,8 +45,8 @@ export function WeekStrip({
                 aria-label={`${formatMonthDay(week.weekStart)} 주 ${week.isCurrent ? "아직 기록 전" : "비어 있는 주"}`}
                 className={`${base} ${
                   week.isCurrent
-                    ? "animate-pulse border-2 border-dashed border-brand text-brand"
-                    : "border border-line/70 bg-transparent text-ink-mute"
+                    ? "border-brand text-brand"
+                    : "border-line bg-transparent text-ink-mute"
                 }`}
               >
                 {week.isCurrent ? "·" : ""}

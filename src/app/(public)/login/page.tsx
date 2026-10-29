@@ -12,15 +12,15 @@ export const metadata = { title: "로그인 · Hello Archive jr" };
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <>
-      <header className="border-b border-ink">
-        <div className="mx-auto flex h-14 w-full max-w-2xl items-center px-5 md:px-6">
+      <header className="public-masthead">
+        <div className="masthead-inner">
           <Logo />
         </div>
       </header>
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-8 px-5 py-14 md:px-6">
+      <main className="login-main mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-8 px-5 py-14 md:px-6">
         <div>
           <Eyebrow>로그인</Eyebrow>
-          <h1 className="mt-4 font-serif text-3xl font-bold leading-snug">
+          <h1 className="mt-4 font-serif text-[2.5rem] font-normal leading-snug tracking-[-0.055em]">
             이메일로 시작해요
           </h1>
           <p className="mt-3 leading-relaxed text-ink-soft">

@@ -13,7 +13,7 @@ export function MonthCardCarousel({ cards }: { cards: CarouselCard[] }) {
   return (
     <section aria-labelledby="month-cards">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id="month-cards" className="font-serif text-lg font-bold">
+        <h2 id="month-cards" className="font-serif text-[1.375rem] font-normal tracking-[-0.035em]">
           달마다 만든 이야기 카드
         </h2>
         <span className="text-[12px] text-ink-mute">옆으로 넘겨 보세요</span>

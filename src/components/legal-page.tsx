@@ -18,8 +18,8 @@ export function LegalPage({
 }) {
   return (
     <>
-      <header className="border-b border-ink">
-        <div className="mx-auto flex h-14 w-full max-w-2xl items-center px-5 md:px-6">
+      <header className="public-masthead">
+        <div className="masthead-inner">
           <Link href="/" aria-label="Hello Archive jr 처음으로">
             <Logo />
           </Link>
@@ -27,7 +27,7 @@ export function LegalPage({
       </header>
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-5 py-12 md:px-6">
         <Eyebrow>{eyebrow}</Eyebrow>
-        <h1 className="mt-4 font-serif text-3xl font-bold leading-snug">{title}</h1>
+        <h1 className="mt-4 font-serif text-[2.5rem] font-normal leading-snug tracking-[-0.05em]">{title}</h1>
         <p className="mt-2 text-sm text-ink-mute">시행일 {effective}</p>
         <div className="mt-6">{children}</div>
       </main>
@@ -39,7 +39,7 @@ export function LegalPage({
 export function LegalSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-10 first:mt-0">
-      <h2 className="border-b border-ink pb-2 font-serif text-lg font-bold">{title}</h2>
+      <h2 className="border-b border-ink pb-2 font-serif text-[1.375rem] font-normal tracking-[-0.035em]">{title}</h2>
       <div className="mt-3 flex flex-col gap-3 leading-[1.9] text-ink-soft">{children}</div>
     </section>
   );

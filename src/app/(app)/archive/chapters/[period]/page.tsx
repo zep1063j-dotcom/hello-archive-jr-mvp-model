@@ -66,7 +66,7 @@ async function ChapterList({
                 className="group flex items-center justify-between gap-4 py-5"
               >
                 <span>
-                  <span className="block font-serif text-xl font-bold group-hover:text-brand">
+                  <span className="block font-serif text-[1.5rem] font-normal tracking-[-0.04em] group-hover:text-brand">
                     {chapter.title}
                   </span>
                   <span className="mt-1 block text-xs text-ink-soft">

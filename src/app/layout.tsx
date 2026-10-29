@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f7f3eb",
+  themeColor: "#f6f3ec",
   // 모바일 키보드가 열리면 화면(레이아웃) 높이가 줄어, 가운데 정렬된 창과 입력란이 키보드에 가려지지 않는다.
   interactiveWidget: "resizes-content",
 };

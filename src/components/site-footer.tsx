@@ -5,7 +5,7 @@ import { CONTACT_EMAIL, contactHref } from "@/lib/contact";
 export function SiteFooter() {
   return (
     <footer className="border-t border-line">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-5 py-6 text-xs text-ink-mute md:px-6">
+      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-3 px-[22px] py-6 text-xs text-ink-mute md:px-8">
         <nav aria-label="약관 및 문의" className="flex flex-wrap gap-x-5 gap-y-1">
           <Link href="/terms" className="flex min-h-10 items-center underline underline-offset-4 hover:text-brand">
             이용약관

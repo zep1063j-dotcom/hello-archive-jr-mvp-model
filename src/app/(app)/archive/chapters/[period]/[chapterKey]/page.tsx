@@ -68,7 +68,7 @@ async function Chapter({
         <Link
           href={`/archive/card/${chapter.key}`}
           transitionTypes={["nav-forward"]}
-          className="-mt-3 flex min-h-14 items-center justify-between gap-3 bg-brand px-5 font-semibold text-white hover:bg-brand-deep rounded-xl"
+          className="-mt-3 flex min-h-14 items-center justify-between gap-3 bg-brand px-5 font-semibold text-white hover:bg-brand-deep rounded-[2px]"
         >
           <span>
             이야기 카드 만들기

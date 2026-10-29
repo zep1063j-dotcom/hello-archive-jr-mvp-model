@@ -65,18 +65,19 @@ export function HomeHub({
 
   return (
     <>
-      <header className="flex items-center gap-4">
+      <header className="journal-child-header flex items-center gap-4">
         <ChildAvatar nickname={child.nickname} photoUrl={photoUrl} />
         <div className="min-w-0 flex-1">
-          <h1 className="font-serif text-2xl font-bold leading-tight break-all">{child.nickname}</h1>
+          <p className="mb-2 text-[10px] tracking-[0.14em] text-ink-soft">아이의 기록장</p>
+          <h1 className="font-serif text-[2rem] font-normal leading-tight tracking-[-0.05em] break-all md:text-[2.5rem]">{child.nickname}</h1>
           <p className="text-sm text-ink-soft">{formatAge(child.birthDate, today)}</p>
         </div>
         {streak > 0 && (
           <p
             aria-live="polite"
-            className="shrink-0 rounded-2xl border border-blush-deep bg-blush px-3 py-2 text-center leading-tight"
+            className="shrink-0 border-l border-line pl-5 text-center leading-tight"
           >
-            <span className="block font-serif text-2xl font-bold">{streak}</span>
+            <span className="block font-serif text-3xl font-normal text-brand-deep">{streak}</span>
             <span className="block text-[11px] text-ink-soft">주 연속</span>
           </p>
         )}
@@ -98,7 +99,7 @@ export function HomeHub({
       )}
 
       <section aria-labelledby="weeks">
-        <h2 id="weeks" className="mb-3 font-serif text-base font-bold">
+        <h2 id="weeks" className="mb-3 journal-section-title">
           함께한 주
         </h2>
         <WeekStrip
@@ -119,8 +120,8 @@ export function HomeHub({
       </section>
 
       <section aria-labelledby="timeline">
-        <div className="mb-4 flex items-end justify-between gap-3 border-b border-ink pb-2">
-          <h2 id="timeline" className="font-serif text-base font-bold">
+        <div className="mb-1 flex items-end justify-between gap-3 pb-3">
+          <h2 id="timeline" className="journal-section-title">
             지난 기록 다시 보기
           </h2>
           <Link
@@ -132,7 +133,7 @@ export function HomeHub({
           </Link>
         </div>
         {recent.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-ink-mute px-5 py-8 leading-relaxed text-ink-soft">
+          <p className="border-y border-line py-8 text-sm leading-[1.9] text-ink-soft">
             {entries.length === 0
               ? question
                 ? "아직 쌓인 기록이 없어요. 위 질문에 한 문장만 적어도 첫 기록이 돼요."
@@ -152,16 +153,16 @@ export function HomeHub({
         <Link
           href={`/archive/card/${cardMonthKey}`}
           transitionTypes={["nav-forward"]}
-          className="flex min-h-16 items-center justify-between gap-3 rounded-2xl border border-ink px-5 hover:bg-blush"
+          className="journal-album-link flex items-center justify-between gap-4 transition-colors hover:bg-blush"
         >
           <span>
-            <span className="block font-serif text-lg font-bold">한 달 이야기 카드 보기</span>
-            <span className="block text-[13px] text-ink-soft">이번 달의 질문과 답이 카드 한 장으로 모여요</span>
+            <span className="block font-serif text-xl font-normal">한 달 이야기 카드 보기</span>
+            <span className="mt-2 block text-[12px] leading-relaxed text-ink-soft">이번 달의 질문과 답이 카드 한 장으로 모여요</span>
           </span>
           <span aria-hidden>↗</span>
         </Link>
       ) : (
-        <p className="rounded-2xl bg-paper-deep/60 px-5 py-4 text-[13px] leading-relaxed text-ink-soft">
+        <p className="border-l border-line pl-5 text-[13px] leading-relaxed text-ink-soft">
           기록이 쌓이면 한 달의 이야기를 카드 한 장으로 볼 수 있어요.
         </p>
       )}
@@ -169,7 +170,7 @@ export function HomeHub({
       <Link
         href="/yearly"
         transitionTypes={["nav-forward"]}
-        className="flex min-h-12 items-center justify-between gap-3 rounded-xl px-1 text-[13px] text-ink-soft hover:text-brand"
+        className="flex min-h-12 items-center justify-between gap-3 rounded-[2px] px-1 text-[13px] text-ink-soft hover:text-brand"
       >
         <span>
           <span className="font-semibold text-ink">매년 같은 질문</span> · 1년 전의 아이와 지금의 아이를 나란히

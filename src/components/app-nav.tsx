@@ -36,18 +36,18 @@ function NavBar({ pathname }: { pathname: string }) {
   const currentIndex = NAV_ITEMS.findIndex((item) => item.match(pathname));
 
   return (
-    <header className="sticky top-0 z-10 border-b border-ink bg-paper">
-      <div className="mx-auto flex w-full max-w-2xl flex-col md:h-14 md:flex-row md:items-center md:justify-between md:px-6">
+    <header className="app-masthead sticky top-0 z-10">
+      <div className="mx-auto flex w-full max-w-[1080px] flex-col md:h-20 md:flex-row md:items-center md:justify-between md:px-8">
         <Link
           href="/home"
           aria-label="Hello Archive jr 홈"
-          className="flex h-12 items-center px-5 md:h-auto md:px-0"
+          className="flex h-14 items-center px-[22px] md:h-auto md:px-0"
         >
           <Logo />
         </Link>
 
         <nav aria-label="주요 메뉴" className="border-t border-line md:border-t-0">
-          <ul className="flex md:gap-6">
+          <ul className="flex md:gap-9">
             {NAV_ITEMS.map((item, index) => {
               const active = item.match(pathname);
               // 메뉴 순서상 오른쪽 메뉴로 가면 앞으로, 왼쪽이면 뒤로 슬라이드
@@ -58,16 +58,17 @@ function NavBar({ pathname }: { pathname: string }) {
                     href={item.href}
                     transitionTypes={active ? undefined : [direction]}
                     aria-current={active ? "page" : undefined}
-                    className={`relative flex h-11 items-center justify-center text-sm tracking-tight md:h-14 ${
+                    className={`relative flex h-11 items-center justify-center text-[13px] tracking-[0.02em] md:h-20 ${
                       active ? "font-bold text-ink" : "text-ink-soft hover:text-ink"
                     }`}
                   >
+                    <span aria-hidden className="mr-2 hidden font-serif text-[11px] text-ink-mute md:inline">0{index + 1}</span>
                     {item.label}
                     {active && (
                       <ViewTransition name="nav-indicator" share="auto">
                         <span
                           aria-hidden
-                          className="absolute inset-x-3 bottom-0 h-[3px] bg-brand md:inset-x-0"
+                          className="absolute inset-x-3 bottom-0 h-[2px] bg-brand md:inset-x-0"
                         />
                       </ViewTransition>
                     )}

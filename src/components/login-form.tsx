@@ -5,11 +5,11 @@ import { submitLogin, type LoginState } from "@/app/actions/auth";
 import { resendWaitSeconds } from "@/lib/resend-wait";
 
 const primaryButton =
-  "flex min-h-12 w-full items-center justify-between rounded-xl bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:bg-ink-mute disabled:opacity-60";
+  "flex min-h-12 w-full items-center justify-between rounded-[2px] bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:bg-ink-mute disabled:opacity-60";
 const secondaryButton =
   "min-h-11 px-1 text-sm text-ink-soft underline underline-offset-4 hover:text-ink disabled:cursor-not-allowed disabled:opacity-60";
 const fieldClass =
-  "w-full border border-ink bg-sheet px-4 py-3 text-base outline-none placeholder:text-ink-mute focus:border-brand focus:ring-1 focus:ring-brand rounded-xl";
+  "w-full border border-ink bg-sheet px-4 py-3 text-base outline-none placeholder:text-ink-mute focus:border-brand focus:ring-1 focus:ring-brand rounded-[2px]";
 const labelClass =
   "text-[11px] font-semibold tracking-[0.14em] text-ink-soft uppercase";
 

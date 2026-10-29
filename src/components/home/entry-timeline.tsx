@@ -20,7 +20,7 @@ export function EntryTimeline({
     <div className="flex flex-col gap-7">
       {groupByMonth(entries).map((group) => (
         <section key={group.label} aria-label={group.label}>
-          <h3 className="border-b border-ink pb-2 font-serif text-base font-bold">
+          <h3 className="border-b border-line pb-3 text-[11px] font-normal tracking-[0.08em] text-ink-soft">
             {group.label}
           </h3>
           <ol>
@@ -32,19 +32,19 @@ export function EntryTimeline({
                   key={entry.id}
                   id={`entry-${entry.id}`}
                   className={`scroll-mt-28 border-t border-line first:border-t-0 ${
-                    isOpen ? "rounded-2xl bg-sheet" : ""
+                    isOpen ? " bg-sheet" : ""
                   }`}
                 >
                   <button
                     type="button"
                     onClick={() => onToggle(entry.id)}
                     aria-expanded={isOpen}
-                    className="group grid w-full grid-cols-[3.5rem_1fr_1.5rem] gap-3 px-1 py-4 text-left md:grid-cols-[4.5rem_1fr_1.5rem] md:px-2"
+                    className="group grid w-full grid-cols-[3.5rem_1fr_1.5rem] gap-4 px-1 py-6 text-left md:grid-cols-[4.5rem_1fr_1.5rem] md:px-2"
                   >
                     <span
                       className={`font-serif leading-none ${isOpen ? "text-brand" : "text-ink-mute group-hover:text-brand"}`}
                     >
-                      <span className="block text-3xl font-semibold tracking-tight">{day}</span>
+                      <span className="block text-[2.5rem] font-normal tracking-[-0.06em]">{day}</span>
                       <span className="mt-1 block text-xs">{Number(month)}월</span>
                     </span>
                     <span>
@@ -52,7 +52,7 @@ export function EntryTimeline({
                         {entry.question.body}
                       </span>
                       <span
-                        className={`mt-2 block font-serif text-[1.125rem] leading-[1.8] whitespace-pre-wrap ${
+                        className={`mt-2 block font-serif text-[1.1875rem] leading-[1.85] whitespace-pre-wrap ${
                           isOpen ? "" : "line-clamp-2"
                         }`}
                       >

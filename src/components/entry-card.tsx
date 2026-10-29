@@ -11,13 +11,13 @@ export function EntryCard({ entry }: { entry: Entry }) {
     <Link
       href={`/archive/${entry.id}`}
       transitionTypes={["nav-forward"]}
-      className="group grid grid-cols-[4rem_1fr] gap-4 border-t border-line py-5 first:border-t-0 md:grid-cols-[5rem_1fr]"
+      className="group grid grid-cols-[4rem_1fr] gap-5 border-t border-line py-7 first:border-t-0 md:grid-cols-[5rem_1fr]"
     >
       <time
         dateTime={entry.createdAt}
         className="font-serif leading-none text-ink-mute group-hover:text-brand"
       >
-        <span className="block text-3xl font-semibold tracking-tight md:text-4xl">
+        <span className="block text-[2.5rem] font-normal tracking-[-0.06em] md:text-5xl">
           {day}
         </span>
         <span className="mt-1 block text-xs">{Number(month)}월</span>
@@ -26,7 +26,7 @@ export function EntryCard({ entry }: { entry: Entry }) {
         <p className="text-[13px] leading-snug text-ink-soft">
           {entry.question.body}
         </p>
-        <p className="mt-2 line-clamp-3 font-serif text-[1.125rem] leading-[1.8] text-ink">
+        <p className="mt-2 line-clamp-3 font-serif text-[1.25rem] leading-[1.85] text-ink">
           {entry.body}
         </p>
         {entry.photos.length > 0 && (

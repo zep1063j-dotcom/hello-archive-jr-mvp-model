@@ -6,8 +6,8 @@ import type { ReactNode } from "react";
 /** 작은 대문자 라벨 (빨간 점 + 트래킹) */
 export function Eyebrow({ children }: { children: ReactNode }) {
   return (
-    <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] text-ink-soft uppercase">
-      <span aria-hidden className="size-1.5 rounded-full bg-brand" />
+    <p className="flex items-center gap-2 text-[10px] font-medium tracking-[0.12em] text-brand-deep uppercase">
+      <span aria-hidden className="h-px w-6 bg-brand" />
       {children}
     </p>
   );
@@ -23,7 +23,7 @@ export function PrimaryLink({
   return (
     <Link
       href={href}
-      className="inline-flex min-h-12 w-full items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep md:w-auto md:min-w-56 rounded-xl"
+      className="inline-flex min-h-12 w-full items-center justify-between bg-brand px-6 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep md:w-auto md:min-w-56 rounded-[2px]"
     >
       {children}
       <span aria-hidden>↗</span>
@@ -41,8 +41,8 @@ export function EmptyState({
   action?: { href: string; label: string };
 }) {
   return (
-    <div className="border border-dashed border-ink-mute px-6 py-10 rounded-2xl">
-      <p className="font-serif text-xl font-semibold leading-snug">{title}</p>
+    <div className="border-y border-line px-1 py-10 ">
+      <p className="font-serif text-xl font-normal leading-snug">{title}</p>
       <p className="mt-3 leading-relaxed text-ink-soft">{description}</p>
       {action && (
         <div className="mt-6">
@@ -63,14 +63,14 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div role="alert" className="border-l-4 border-brand bg-sheet px-5 py-6 rounded-r-xl">
-      <p className="font-serif text-xl font-semibold leading-snug">{title}</p>
+    <div role="alert" className="border-l-4 border-brand bg-sheet px-5 py-6 ">
+      <p className="font-serif text-xl font-normal leading-snug">{title}</p>
       <p className="mt-3 leading-relaxed text-ink-soft">{description}</p>
       {onRetry && (
         <button
           type="button"
           onClick={onRetry}
-          className="mt-5 inline-flex min-h-12 items-center border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-xl"
+          className="mt-5 inline-flex min-h-12 items-center border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-[2px]"
         >
           다시 시도
         </button>
@@ -80,7 +80,7 @@ export function ErrorState({
 }
 
 function SkeletonBlock({ className }: { className: string }) {
-  return <div className={`animate-pulse bg-paper-deep ${className} rounded-xl`} />;
+  return <div className={`animate-pulse bg-paper-deep ${className} rounded-[2px]`} />;
 }
 
 // 메뉴를 옮길 때마다 뼈대가 번쩍였다 사라지지 않게, 뼈대는 잠깐(약 0.25초) 기다렸다가 부드럽게 나타난다.

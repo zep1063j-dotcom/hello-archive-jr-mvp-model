@@ -70,7 +70,7 @@ export function ChildPhotoEditor({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
-          className="min-h-11 border border-ink px-4 text-sm font-semibold hover:bg-ink hover:text-paper disabled:opacity-40 rounded-xl"
+          className="min-h-11 border border-ink px-4 text-sm font-semibold hover:bg-ink hover:text-paper disabled:opacity-40 rounded-[2px]"
         >
           {busy ? "올리는 중…" : photoUrl ? "사진 바꾸기" : "사진 추가"}
         </button>

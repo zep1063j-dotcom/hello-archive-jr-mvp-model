@@ -17,7 +17,7 @@ type Mode = "view" | "edit" | "confirm-delete";
 const SAVE_ERROR = "저장하지 못했어요. 쓴 내용은 그대로 있어요. 잠시 후 다시 눌러 주세요.";
 
 const secondaryButton =
-  "min-h-12 border border-ink/30 px-5 text-sm hover:border-ink hover:bg-sheet disabled:cursor-not-allowed disabled:opacity-40 rounded-xl";
+  "min-h-12 border border-ink/30 px-5 text-sm hover:border-ink hover:bg-sheet disabled:cursor-not-allowed disabled:opacity-40 rounded-[2px]";
 
 // 기록 상세의 본문 + 수정·삭제. 삭제는 되돌릴 수 없어 한 번 더 확인한다.
 // 수정은 이번 주가 아닌 지난 기록에도 허용한다(오타 수정 등, 본문만 바뀐다). 질문은 여기서 바뀌지 않는다 (D-039).
@@ -129,7 +129,7 @@ export function EntryDetailBody({
           <button
             type="submit"
             disabled={pending || !canSubmitBody(draft)}
-            className="flex min-h-12 flex-1 items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-brand rounded-xl"
+            className="flex min-h-12 flex-1 items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-brand rounded-[2px]"
           >
             {saving ? "저장하는 중…" : "수정 저장"}
             <span aria-hidden>↗</span>
@@ -167,7 +167,7 @@ export function EntryDetailBody({
           <div
             role="alertdialog"
             aria-label="기록 삭제 확인"
-            className="border-l-4 border-brand bg-sheet px-5 py-5 rounded-r-xl"
+            className="border-l-4 border-brand bg-sheet px-5 py-5 "
           >
             <p className="font-serif text-lg font-semibold">이 기록을 삭제할까요?</p>
             <p className="mt-2 text-sm leading-relaxed text-ink-soft">
@@ -179,7 +179,7 @@ export function EntryDetailBody({
                 <button
                   type="submit"
                   disabled={pending}
-                  className="min-h-12 flex-1 bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-deep disabled:opacity-40 rounded-xl"
+                  className="min-h-12 flex-1 bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-deep disabled:opacity-40 rounded-[2px]"
                 >
                   {deleting ? "삭제하는 중…" : "삭제하기"}
                 </button>

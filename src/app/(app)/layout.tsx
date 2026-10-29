@@ -10,7 +10,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <AppNav />
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-5 pt-5 pb-16 md:px-6">
+      <main className="app-main">
         <Suspense fallback={<PageSkeleton />}>
           <AuthGate>{children}</AuthGate>
         </Suspense>

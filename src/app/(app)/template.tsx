@@ -11,7 +11,7 @@ const directional = {
 export default function AppTemplate({ children }: { children: React.ReactNode }) {
   return (
     <ViewTransition enter={directional} exit={directional} default="none">
-      <div className="flex flex-col gap-8">{children}</div>
+      <div className="journal-pages flex flex-col gap-8 md:gap-10">{children}</div>
     </ViewTransition>
   );
 }

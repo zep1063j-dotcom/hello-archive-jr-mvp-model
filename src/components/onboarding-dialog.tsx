@@ -18,12 +18,12 @@ type Step = "welcome" | "form" | "finish";
 type Phase = "in" | "out";
 
 const primaryButton =
-  "flex min-h-12 w-full items-center justify-center rounded-xl bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:bg-ink-mute disabled:opacity-70";
+  "flex min-h-12 w-full items-center justify-center rounded-[2px] bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:bg-ink-mute disabled:opacity-70";
 const fieldClass =
-  "w-full rounded-xl border border-ink/40 bg-paper px-4 py-3 text-base outline-none placeholder:text-ink-mute focus:border-brand focus:ring-1 focus:ring-brand";
+  "w-full rounded-[2px] border border-ink/40 bg-paper px-4 py-3 text-base outline-none placeholder:text-ink-mute focus:border-brand focus:ring-1 focus:ring-brand";
 const labelClass = "text-[13px] font-semibold text-ink";
 const quietButton =
-  "min-h-11 rounded-lg px-3 text-[13px] text-ink-soft underline underline-offset-4 hover:text-ink disabled:opacity-50";
+  "min-h-11 rounded-[2px] px-3 text-[13px] text-ink-soft underline underline-offset-4 hover:text-ink disabled:opacity-50";
 
 /** 움직임 줄이기 설정이면 단계 사이 대기를 없앤다 (CSS도 같은 설정에서 애니메이션을 끈다). */
 function stepDelay(ms: number): number {
@@ -199,9 +199,6 @@ export function OnboardingDialog({
         <div ref={innerRef} className="onboarding-content" data-phase={phase}>
           {step === "welcome" && (
             <div className="flex flex-col items-center gap-7 px-7 pt-9 pb-7 text-center">
-              <span aria-hidden className="font-serif text-4xl leading-none font-bold">
-                h<span className="text-brand">·</span>
-              </span>
               <div className="flex flex-col gap-3">
                 <h2 id={labelledBy} ref={headingRef} tabIndex={-1} className="font-serif text-[1.375rem] leading-snug font-bold text-balance outline-none">
                   안녕하세요, 아카이브 jr입니다.
@@ -281,11 +278,11 @@ export function OnboardingDialog({
                 </p>
               </div>
 
-              <PrivacyNote className="rounded-xl bg-paper px-4 py-3" />
+              <PrivacyNote className="rounded-[2px] bg-paper px-4 py-3" />
 
               <div aria-live="polite">
                 {formError && (
-                  <p role="alert" className="rounded-xl border-l-4 border-brand bg-paper px-4 py-3 text-[13px] leading-relaxed">
+                  <p role="alert" className="rounded-[2px] border-l-4 border-brand bg-paper px-4 py-3 text-[13px] leading-relaxed">
                     {formError}
                   </p>
                 )}
@@ -303,9 +300,6 @@ export function OnboardingDialog({
 
           {step === "finish" && (
             <div className="flex flex-col items-center gap-7 px-7 pt-9 pb-7 text-center">
-              <span aria-hidden className="font-serif text-4xl leading-none font-bold">
-                h<span className="text-brand">·</span>
-              </span>
               <div className="flex flex-col gap-3">
                 <h2 id={labelledBy} ref={headingRef} tabIndex={-1} className="font-serif text-[1.375rem] leading-snug font-bold outline-none">
                   환영합니다.
@@ -316,7 +310,7 @@ export function OnboardingDialog({
                   아이의 성장 자서전을 만들어 보세요.
                 </p>
               </div>
-              <label className="flex w-full items-start gap-3 rounded-xl bg-paper px-4 py-3 text-left text-[13px] leading-relaxed">
+              <label className="flex w-full items-start gap-3 rounded-[2px] bg-paper px-4 py-3 text-left text-[13px] leading-relaxed">
                 <input
                   type="checkbox"
                   checked={emailConsent}
@@ -331,7 +325,7 @@ export function OnboardingDialog({
               </label>
               <div aria-live="polite" className="w-full">
                 {formError && (
-                  <p role="alert" className="rounded-xl border-l-4 border-brand bg-paper px-4 py-3 text-left text-[13px] leading-relaxed">
+                  <p role="alert" className="rounded-[2px] border-l-4 border-brand bg-paper px-4 py-3 text-left text-[13px] leading-relaxed">
                     {formError}
                   </p>
                 )}

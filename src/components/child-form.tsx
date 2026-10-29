@@ -6,9 +6,9 @@ import { updateChild, type ChildFormState } from "@/app/actions/children";
 import { NICKNAME_MAX_LENGTH } from "@/lib/child-validation";
 
 const primaryButton =
-  "flex min-h-12 w-full items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:bg-ink-mute disabled:opacity-60 rounded-xl";
+  "flex min-h-12 w-full items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:bg-ink-mute disabled:opacity-60 rounded-[2px]";
 const fieldClass =
-  "w-full border border-ink bg-sheet px-4 py-3 text-base outline-none placeholder:text-ink-mute focus:border-brand focus:ring-1 focus:ring-brand rounded-xl";
+  "w-full border border-ink bg-sheet px-4 py-3 text-base outline-none placeholder:text-ink-mute focus:border-brand focus:ring-1 focus:ring-brand rounded-[2px]";
 const labelClass =
   "text-[11px] font-semibold tracking-[0.14em] text-ink-soft uppercase";
 
@@ -90,7 +90,7 @@ export function ChildForm({
 
       <div id={formErrorId} aria-live="polite">
         {state.error && (
-          <p role="alert" className="border-l-4 border-brand bg-sheet px-4 py-3 text-sm rounded-r-xl">
+          <p role="alert" className="border-l-4 border-brand bg-sheet px-4 py-3 text-sm ">
             {state.error}
           </p>
         )}
@@ -103,7 +103,7 @@ export function ChildForm({
         </button>
         <Link
           href="/profile"
-          className="flex min-h-12 items-center justify-center border border-line text-ink-soft hover:border-ink hover:text-ink rounded-xl"
+          className="flex min-h-12 items-center justify-center border border-line text-ink-soft hover:border-ink hover:text-ink rounded-[2px]"
         >
           취소
         </Link>

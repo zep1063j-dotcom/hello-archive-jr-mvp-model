@@ -129,7 +129,7 @@ export function useEntryPhotos(existing: EntryPhoto[]) {
 
 export type EntryPhotosState = ReturnType<typeof useEntryPhotos>;
 
-const thumb = "relative size-20 shrink-0 overflow-hidden border border-line bg-paper-deep rounded-xl";
+const thumb = "relative size-20 shrink-0 overflow-hidden border border-line bg-paper-deep rounded-[2px]";
 
 /** 작성·수정 칸의 사진 영역: 올라간 사진, 대기 중인 사진, 추가 버튼. */
 export function EntryPhotoField({ photos, disabled }: { photos: EntryPhotosState; disabled?: boolean }) {
@@ -171,7 +171,7 @@ export function EntryPhotoField({ photos, disabled }: { photos: EntryPhotosState
               type="button"
               onClick={() => inputRef.current?.click()}
               disabled={locked}
-              className="grid size-20 shrink-0 place-items-center border border-dashed border-ink/40 text-center text-xs text-ink-soft hover:border-ink hover:bg-sheet disabled:opacity-40 rounded-xl"
+              className="grid size-20 shrink-0 place-items-center border border-dashed border-ink/40 text-center text-xs text-ink-soft hover:border-ink hover:bg-sheet disabled:opacity-40 rounded-[2px]"
             >
               <span>
                 <span aria-hidden className="block text-xl leading-none">
@@ -216,7 +216,7 @@ export function PhotoGallery({ photos }: { photos: EntryPhoto[] }) {
     <ul className="flex flex-col gap-4" aria-label={`붙인 사진 ${photos.length}장`}>
       {photos.map((photo) => (
         // 사진이 오기 전에도 자리를 잡아 두어(min-h) 글이 아래로 밀리지 않게 한다. 맨 위쪽에 있는 사진이라 바로 불러온다.
-        <li key={photo.id} className="flex min-h-40 justify-center border border-line bg-paper-deep rounded-xl">
+        <li key={photo.id} className="flex min-h-40 justify-center border border-line bg-paper-deep rounded-[2px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={photo.url}
@@ -238,7 +238,7 @@ export function PhotoStrip({ photos, size = "md" }: { photos: EntryPhoto[]; size
       {photos.map((photo) => (
         <li key={photo.id}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photo.url} alt="붙인 사진" className={`${box} rounded-xl border border-line object-cover`} loading="lazy" />
+          <img src={photo.url} alt="붙인 사진" className={`${box} rounded-[2px] border border-line object-cover`} loading="lazy" />
         </li>
       ))}
     </ul>

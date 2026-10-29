@@ -24,10 +24,10 @@ export default function MakePage() {
       <Link
         href="/archive/chapters/1m"
         transitionTypes={["nav-forward"]}
-        className="flex min-h-16 items-center justify-between gap-3 border border-ink px-4 py-3 hover:bg-blush rounded-xl"
+        className="journal-album-link flex items-center justify-between gap-4 hover:bg-blush"
       >
         <span>
-          <span className="block font-serif text-lg font-bold">1개월 이야기 카드</span>
+          <span className="block font-serif text-[1.375rem] font-normal tracking-[-0.035em]">1개월 이야기 카드</span>
           <span className="block text-[13px] text-ink-soft">한 달 기록을 이미지 한 장으로 저장하고 공유해요</span>
         </span>
         <span aria-hidden>↗</span>
@@ -47,12 +47,12 @@ async function BookSection() {
   return (
     <>
       <section aria-labelledby="book-preview" className="flex flex-col gap-3">
-        <h2 id="book-preview" className="border-b border-ink pb-2 font-serif text-lg font-bold">
+        <h2 id="book-preview" className="border-b border-ink pb-2 font-serif text-[1.375rem] font-normal tracking-[-0.035em]">
           <span className="break-all">{child.nickname}</span>의 책 한 권
         </h2>
         {preview ? (
           <>
-            <dl className="grid grid-cols-3 overflow-hidden rounded-2xl border border-ink text-center">
+            <dl className="grid grid-cols-3 border-y border-line text-center">
               <Stat label="기록" value={`${preview.entryCount}개`} />
               <Stat label="사진" value={`${preview.photoCount}장`} />
               <Stat label="기록한 달" value={`${preview.monthCount}개월`} />
@@ -65,7 +65,7 @@ async function BookSection() {
             </p>
           </>
         ) : (
-          <p className="border border-dashed border-ink-mute px-5 py-6 leading-relaxed text-ink-soft rounded-2xl">
+          <p className="border border-dashed border-ink-mute px-5 py-6 leading-relaxed text-ink-soft">
             아직 담을 기록이 없어요. 이번 주 질문에 답하면 여기서 책 한 권 분량을 볼 수 있어요.
           </p>
         )}
@@ -73,7 +73,7 @@ async function BookSection() {
 
       <section aria-labelledby="book-products" className="flex flex-col gap-6">
         <div>
-          <h2 id="book-products" className="border-b border-ink pb-2 font-serif text-lg font-bold">
+          <h2 id="book-products" className="border-b border-ink pb-2 font-serif text-[1.375rem] font-normal tracking-[-0.035em]">
             곧 만들 수 있게 준비하고 있어요
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-ink-soft">
@@ -81,9 +81,9 @@ async function BookSection() {
           </p>
         </div>
         {PRODUCTS.map((product) => (
-          <article key={product.key} className="flex flex-col gap-3 border border-ink/30 p-4 rounded-2xl">
+          <article key={product.key} className="flex flex-col gap-3 border-t border-line py-7">
             <div>
-              <h3 className="font-serif text-lg font-bold">{product.name}</h3>
+              <h3 className="font-serif text-[1.375rem] font-normal tracking-[-0.035em]">{product.name}</h3>
               <p className="text-[13px] text-ink-soft">{product.summary}</p>
             </div>
             <p className="leading-relaxed">{product.detail}</p>
@@ -97,9 +97,9 @@ async function BookSection() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border-l border-ink px-1 py-4 first:border-l-0">
+    <div className="border-l border-line px-1 py-6 first:border-l-0">
       <dt className="text-[11px] text-ink-soft">{label}</dt>
-      <dd className="mt-1 font-serif text-xl font-bold">{value}</dd>
+      <dd className="mt-1 font-serif text-3xl font-normal">{value}</dd>
     </div>
   );
 }

@@ -81,26 +81,26 @@ async function ArchiveContent({
           placeholder="기록에서 단어 찾기"
           enterKeyHint="search"
           autoComplete="off"
-          className="min-h-12 min-w-0 flex-1 border border-ink/40 bg-paper px-4 focus:border-ink rounded-xl"
+          className="min-h-12 min-w-0 flex-1 border border-ink/40 bg-paper px-4 focus:border-ink rounded-[2px]"
         />
         <button
           type="submit"
-          className="min-h-12 shrink-0 border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-xl"
+          className="min-h-12 shrink-0 border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-[2px]"
         >
           찾기
         </button>
       </form>
 
       <nav aria-label="기간별 모아보기">
-        <ul className="grid grid-cols-3 overflow-hidden rounded-2xl border border-ink">
+        <ul className="grid grid-cols-3 border-y border-ink/30">
           {PERIODS.map((period) => (
-            <li key={period} className="border-l border-ink first:border-l-0">
+            <li key={period} className="border-l border-line first:border-l-0">
               <Link
                 href={`/archive/chapters/${period}`}
                 transitionTypes={["nav-forward"]}
                 className="flex min-h-16 flex-col items-center justify-center px-1 text-center transition-colors hover:bg-blush"
               >
-                <span className="font-serif text-lg font-bold leading-none">
+                <span className="font-serif text-[1.375rem] font-normal tracking-[-0.035em] leading-none">
                   {period === "1y" ? "1년" : `${period[0]}개월`}
                 </span>
                 <span className="mt-1 text-[11px] text-ink-soft">
@@ -115,7 +115,7 @@ async function ArchiveContent({
       <Link
         href="/yearly"
         transitionTypes={["nav-forward"]}
-        className="flex min-h-14 items-center justify-between gap-3 border border-ink/30 px-4 hover:border-ink hover:bg-blush rounded-xl"
+        className="flex min-h-14 items-center justify-between gap-3 border border-ink/30 px-4 hover:border-ink hover:bg-blush rounded-[2px]"
       >
         <span>
           <span className="block font-serif font-bold">매년 같은 질문</span>
@@ -142,7 +142,7 @@ async function ArchiveContent({
         <div className="flex flex-col gap-8">
           {groupByMonth(entries).map((group) => (
             <section key={group.label} aria-label={group.label}>
-              <h2 className="border-b border-ink pb-2 font-serif text-lg font-bold">
+              <h2 className="border-b border-ink pb-2 font-serif text-[1.375rem] font-normal tracking-[-0.035em]">
                 {group.label}
               </h2>
               <ol>

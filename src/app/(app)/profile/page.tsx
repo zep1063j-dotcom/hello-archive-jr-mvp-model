@@ -36,14 +36,14 @@ export default function ProfilePage(props: PageProps<"/profile">) {
       <section aria-labelledby="account" className="flex flex-col gap-2">
         <h2
           id="account"
-          className="border-b border-ink pb-2 font-serif text-lg font-bold"
+          className="border-b border-ink pb-2 font-serif text-[1.375rem] font-normal tracking-[-0.035em]"
         >
           계정
         </h2>
         <Suspense fallback={<p className="mt-2 text-sm text-ink-mute">불러오는 중…</p>}>
           <SignedInAs />
         </Suspense>
-        <SignOutButton className="min-h-12 w-full border border-ink px-5 text-left font-semibold hover:bg-ink hover:text-paper rounded-xl">
+        <SignOutButton className="min-h-12 w-full border border-ink px-5 text-left font-semibold hover:bg-ink hover:text-paper rounded-[2px]">
           로그아웃
         </SignOutButton>
         <a
@@ -100,7 +100,7 @@ async function ChildSection({
     <section aria-labelledby="child">
       <h2
         id="child"
-        className="border-b border-ink pb-2 font-serif text-lg font-bold"
+        className="border-b border-ink pb-2 font-serif text-[1.375rem] font-normal tracking-[-0.035em]"
       >
         아이
       </h2>
@@ -116,7 +116,7 @@ async function ChildSection({
       ) : (
         <>
           {saved === "1" && (
-            <p role="status" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm rounded-r-xl">
+            <p role="status" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
               저장했어요.
             </p>
           )}
@@ -137,7 +137,7 @@ async function ChildSection({
           </dl>
           <Link
             href="/profile?edit=1"
-            className="mt-2 flex min-h-12 w-full items-center justify-between border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-xl"
+            className="mt-2 flex min-h-12 w-full items-center justify-between border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-[2px]"
           >
             수정하기
             <span aria-hidden>↗</span>
@@ -159,16 +159,16 @@ async function EmailSection({
 
   return (
     <section aria-labelledby="email">
-      <h2 id="email" className="border-b border-ink pb-2 font-serif text-lg font-bold">
+      <h2 id="email" className="border-b border-ink pb-2 font-serif text-[1.375rem] font-normal tracking-[-0.035em]">
         주간 질문 이메일
       </h2>
       {result === "error" && (
-        <p role="alert" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm rounded-r-xl">
+        <p role="alert" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
           저장하지 못했어요. 잠시 후 다시 시도해 주세요.
         </p>
       )}
       {(result === "on" || result === "off") && (
-        <p role="status" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm rounded-r-xl">
+        <p role="status" className="mt-4 border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
           {result === "on"
             ? "수신을 켰어요. 다음 월요일 저녁부터 이번 주 질문을 보내 드려요."
             : "수신을 껐어요."}
@@ -183,7 +183,7 @@ async function EmailSection({
         <input type="hidden" name="consent" value={consent ? "0" : "1"} />
         <button
           type="submit"
-          className="flex min-h-12 w-full items-center justify-between border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-xl"
+          className="flex min-h-12 w-full items-center justify-between border border-ink px-5 font-semibold hover:bg-ink hover:text-paper rounded-[2px]"
         >
           {consent ? "이메일 받지 않기" : "이메일 받기"}
           <span aria-hidden>↗</span>

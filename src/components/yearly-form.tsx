@@ -42,7 +42,7 @@ export function YearlyForm({ year, questions }: { year: number; questions: Quest
                 defaultValue={question.current}
                 maxLength={YEARLY_ANSWER_MAX_LENGTH}
                 rows={3}
-                className="mt-1 min-h-24 w-full resize-y border border-ink/40 bg-paper px-4 py-3 leading-relaxed focus:border-ink rounded-xl"
+                className="mt-1 min-h-24 w-full resize-y border border-ink/40 bg-paper px-4 py-3 leading-relaxed focus:border-ink rounded-[2px]"
                 placeholder="비워 두면 답하지 않은 것으로 둬요"
               />
             </div>
@@ -63,19 +63,19 @@ export function YearlyForm({ year, questions }: { year: number; questions: Quest
 
       <div className="flex flex-col gap-3">
         {state.status === "saved" && (
-          <p role="status" className="border-l-4 border-brand bg-sheet px-4 py-3 text-sm rounded-r-xl">
+          <p role="status" className="border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
             {state.message}
           </p>
         )}
         {state.status === "error" && (
-          <p role="alert" className="border-l-4 border-brand bg-sheet px-4 py-3 text-sm rounded-r-xl">
+          <p role="alert" className="border-l-4 border-brand bg-sheet px-4 py-3 text-sm">
             {state.message}
           </p>
         )}
         <button
           type="submit"
           disabled={pending}
-          className="flex min-h-12 w-full items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-40 rounded-xl"
+          className="flex min-h-12 w-full items-center justify-between bg-brand px-5 text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-40 rounded-[2px]"
         >
           {pending ? "저장하는 중…" : `${year}년 답 저장하기`}
           <span aria-hidden>↗</span>

@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
-/* 브랜드: 블랙 + 레드(포인트). 큰 면적은 종이·살구빛 같은 부드러운 색으로 두고 검정은 글씨와 가는 선에만 쓴다. 종이 위에 쓰는 기록장 느낌에 둥근 모서리를 더해 딱딱함을 덜었다 — 구분은 가는 선·세리프 글씨와 큰 곡률로 한다. */
+/* 종이·먹색·적갈색 잉크. 색 면 대신 여백과 얇은 선으로 읽는 순서를 만든다. */
 :root {
-  --paper: #f7f3eb;
-  --paper-deep: #ece5d6;
-  --sheet: #fffdf8;
-  --ink: #111111;
-  --ink-soft: #57534e;
-  --ink-mute: #7d766b;
-  --brand-red: #d92f3e;
-  --brand-deep: #b32432;
-  --blush: #f6e5da;
-  --blush-deep: #ecd0c0;
-  --line: #d6cdbb;
+  --paper: #f6f3ec;
+  --paper-deep: #eae4d8;
+  --sheet: #fffdf7;
+  --ink: #2b2925;
+  --ink-soft: #625c52;
+  --ink-mute: #746d62;
+  --brand-red: #a44232;
+  --brand-deep: #803326;
+  --blush: #f0e8db;
+  --blush-deep: #d9cbbb;
+  --line: #d6cfc2;
 }
 
 @theme inline {
@@ -35,12 +35,14 @@
     Batang, serif;
 }
 
-/* 모서리를 부드럽게: 버튼·입력칸·카드는 둥근 모서리를 쓴다(클래스로 지정). 아직 지정하지 않은 입력 요소의 기본값도 같은 둥근 모서리로 맞춘다. */
 @layer base {
   input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
   textarea,
   select {
-    border-radius: 0.75rem;
+    border-radius: 2px;
+  }
+  button, a, input, textarea, select {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -49,6 +51,67 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   word-break: keep-all;
+  text-rendering: optimizeLegibility;
+}
+
+/* 소개와 앱을 같은 기록장의 표지·본문으로 연결한다. */
+.public-masthead, .app-masthead { border-bottom: 1px solid var(--line); }
+.masthead-inner {
+  width: 100%; max-width: 1080px; margin: 0 auto; min-height: 80px;
+  padding: 0 32px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+}
+.masthead-note { font-size: 11px; color: var(--ink-soft); letter-spacing: .08em; }
+.app-masthead { background: var(--paper); }
+.app-main {
+  width: 100%; max-width: 800px; margin: 0 auto; padding: 48px 40px 100px;
+  display: flex; flex: 1; flex-direction: column; gap: 40px;
+}
+.journal-pages > header:not(.journal-child-header) h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 400; letter-spacing: -.055em; line-height: 1.3; }
+.journal-pages > header:not(.journal-child-header) { padding-bottom: 18px; }
+.journal-pages > header:not(.journal-child-header) > p:not(:first-child) { max-width: 36rem; font-size: 14px; line-height: 1.9; }
+.journal-child-header { padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+.journal-composer { background: var(--sheet); border-top: 2px solid var(--ink); border-bottom: 1px solid var(--line); box-shadow: 0 6px 20px rgb(43 41 37 / .025); }
+.journal-composer > div:first-child { padding-top: 28px; }
+.journal-composer textarea { background: transparent; border-color: var(--line); line-height: 2; }
+.journal-section-title { font-family: var(--font-serif); font-size: 20px; font-weight: 400; letter-spacing: -.04em; }
+.journal-album-link { position: relative; min-height: 108px; padding: 24px 24px 24px 36px; background: var(--paper-deep); border-left: 3px solid var(--brand-red); }
+.journal-album-link::before { content: ""; position: absolute; inset: 0 auto 0 8px; width: 1px; background: var(--paper); }
+
+/* 소개 화면: 기록 예시는 펼친 한 페이지처럼 배치한다. */
+.landing-main { max-width: 1080px; width: 100%; margin: 0 auto; padding: 78px 32px 32px; flex: 1; }
+.landing-hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 64px; align-items: start; }
+.landing-title { margin-top: 24px; font-family: var(--font-serif); font-size: clamp(3rem, 5.2vw, 4.4rem); font-weight: 400; line-height: 1.24; letter-spacing: -.075em; }
+.landing-title > span { display: block; margin-top: 24px; font-size: clamp(1.3rem, 2.3vw, 1.8rem); letter-spacing: -.05em; line-height: 1.6; }
+.landing-description { margin-top: 26px; font-size: 14px; line-height: 1.95; color: var(--ink-soft); }
+.landing-specimen { padding-top: 18px; min-width: 0; }
+.specimen-caption { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-soft); margin-bottom: 14px; }
+.specimen-page { background: var(--sheet); border-top: 2px solid var(--ink); padding: 30px 32px 24px; box-shadow: 0 10px 28px rgb(43 41 37 / .055), 3px 4px 0 -1px var(--paper-deep); }
+.specimen-dateline { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-soft); padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.specimen-question { margin-top: 32px; font-size: 12px; line-height: 1.8; color: var(--ink-soft); }
+.specimen-quote { margin: 20px 0 48px; font-family: var(--font-serif); font-size: clamp(1.4rem, 2.3vw, 1.8rem); line-height: 1.9; letter-spacing: -.045em; }
+.specimen-footnote { display: flex; justify-content: space-between; padding-top: 18px; border-top: 1px solid var(--line); font-size: 10px; color: var(--ink-mute); }
+.specimen-archive { display: flex; gap: 22px; align-items: center; padding: 26px 0 0; color: var(--brand-deep); }
+.landing-principles { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 80px; border-top: 1px solid var(--ink); padding-top: 22px; gap: 30px; }
+.landing-principles li { display: flex; align-items: baseline; gap: 18px; }
+.login-main { border-left: 1px solid var(--line); margin-top: 56px; margin-bottom: 56px; padding-left: 36px; }
+
+@media (max-width: 767px) {
+  .masthead-inner { min-height: 66px; padding: 0 22px; }
+  .masthead-note { font-size: 10px; letter-spacing: 0; }
+  .app-main { padding: 30px 22px 72px; gap: 32px; }
+  .journal-child-header { padding-bottom: 20px; }
+  .landing-main { padding: 44px 22px 28px; }
+  .landing-hero { grid-template-columns: 1fr; gap: 44px; }
+  .landing-title { margin-top: 22px; font-size: 3.25rem; }
+  .landing-title > span { margin-top: 18px; font-size: 1.35rem; }
+  .landing-description { margin-top: 20px; }
+  .landing-specimen { padding-top: 0; }
+  .specimen-page { padding: 24px; }
+  .specimen-quote { font-size: 1.55rem; margin-bottom: 36px; }
+  .landing-principles { margin-top: 40px; gap: 14px; }
+  .landing-principles li { flex-direction: column; gap: 9px; }
+  .landing-principles li > span:last-child { font-size: 12px; line-height: 1.6; }
+  .login-main { margin-top: 32px; margin-bottom: 32px; border-left: 0; padding-left: 22px; }
 }
 
 ::selection {
@@ -101,9 +164,10 @@ body {
   max-height: calc(100dvh - 2rem);
   overflow-y: auto;
   overscroll-behavior: contain;
-  border-radius: 1.5rem;
+  border-radius: 2px;
+  border-top: 3px solid var(--brand-red);
   background: var(--sheet);
-  box-shadow: 0 18px 50px rgb(17 17 17 / 0.22);
+  box-shadow: 0 18px 50px rgb(43 41 37 / 0.14);
   transition: height 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .onboarding-dialog[open] .onboarding-panel {
@@ -236,4 +300,8 @@ body {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
   }
+}
+
+@media (max-width: 379px) {
+  .masthead-note { display: none; }
 }
