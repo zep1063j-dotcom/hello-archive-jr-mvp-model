@@ -53,7 +53,7 @@ async function MonthCardContent({
         <Eyebrow>{chapter.isOpen ? "진행 중인 달" : "완결된 달"}</Eyebrow>
         <h1 className="mt-3 font-serif text-3xl font-bold">{chapter.title} 이야기 카드</h1>
         <p className="mt-2 text-sm text-ink-soft">
-          그 달 아이의 말로 만든 카드예요. 이미지로 저장하거나 공유할 수 있어요.
+          앞면은 한 달의 사진 앨범, 뒷면은 아이와 나눈 대화예요. 이미지로 저장하거나 공유할 수 있어요.
         </p>
       </header>
       {model ? (
@@ -71,7 +71,7 @@ async function MonthCardContent({
       )}
       {chapter.isOpen && model && (
         <p className="text-sm text-ink-mute">
-          아직 진행 중인 달이에요. 기록을 더 남기면 카드에도 최근 기록이 담겨요.
+          아직 진행 중인 달이에요. 기록을 더 남기면 앨범에도 새 기록이 함께 담겨요.
         </p>
       )}
     </>

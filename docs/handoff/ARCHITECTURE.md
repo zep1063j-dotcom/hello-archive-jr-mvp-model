@@ -16,7 +16,7 @@ src/
     entry-validation.ts  # 기록 본문 검증, 순수 TS (SESSION 05)
     my-entries.ts        # 이번 주 질문·내 기록 조회, 서버 전용 (SESSION 05)
     chapters.ts          # 기간 챕터(월/분기/연) 구간·묶음, 순수 TS (SESSION 06)
-    month-card.ts        # 1개월 이야기 카드 구성·글귀·글자 배치, 순수 TS (D-029)
+    month-card.ts        # 1개월 앨범 카드 구성·사진 격자·질문과 답 페이지 배치, 순수 TS (D-049)
     weekly-email.ts      # 주간 이메일 규칙(발송 시각·대상·재시도·본문), 순수 TS (SESSION 07)
     weekly-email-job.ts  # 발송 작업: DB·발송기 주입, 멱등·보정형 (SESSION 07)
     resend.ts            # Resend REST 발송, 서버 전용 (SESSION 07)
@@ -51,7 +51,7 @@ docs/handoff/     # 인수인계 문서
 | `/archive/chapters/[period]/[chapterKey]` | app | 챕터 상세. 키 `2026-10`·`2026-q4`·`2026`, 구간 `[start,end)` KST, 작성일 기준, 오래된 기록 먼저. 구현됨 (D-021) | 06 |
 | `/profile` | app | 자녀 조회·수정(`?edit=1`), 주간 이메일 수신 켜기/끄기, 로그아웃 구현됨 / 데이터 삭제 요청은 미구현 | 04, 07 |
 | `/write?week=YYYY-MM-DD` | app | 놓친 지난 질문에 기록(D-024). 쓸 수 없는 주는 안내 화면 | 09 |
-| `/archive/card/[monthKey]` | app | 1개월 이야기 카드(키 `2026-10`): 앞면 최근 기록 5개의 질문·답, 뒷면 사진/글귀, 브라우저 캔버스로 그려 PNG 저장·공유. 서버는 기록·사진 URL만 준다 (D-029) | 09 |
+| `/archive/card/[monthKey]` | app | 1개월 이야기 카드(키 `2026-10`): 앞면은 날짜·사진 모음(4·5분할), 뒷면은 날짜·질문·답 목록. 다섯 기록씩 묶고 긴 글은 추가 뒷면으로 이어 쓴다. 직각 캔버스에서 PNG 저장·공유하며 서버는 기록·사진 URL만 준다 (D-049) | 09 |
 | `/terms`, `/privacy` | public | 이용약관·개인정보 처리방침(초안, 법률 검토 필요). 소개·로그인 푸터와 프로필 아래에서 링크 (D-035) | 09 |
 | `/make` | app | 제작 탭: 1개월 이야기 카드 링크, 책 한 권 분량 요약, PDF·종이책 "받아보고 싶어요" 표시(실제 생성·주문 없음) (D-036) | 09 |
 | `/yearly` | app | 매년 같은 질문 5개: 지금 연도 답 쓰기·수정, 지난 연도 읽기 전용으로 나란히 (D-026) | 09 |

@@ -4,17 +4,16 @@ import { makeChapter, parseChapterKey } from "./chapters.ts";
 import {
   buildMonthCard,
   cardTitle,
-  layoutHeader,
-  layoutStory,
-  MAX_CARD_ITEMS,
+  ALBUM,
+  ALBUM_WIDTH,
+  albumFrames,
+  albumGroups,
+  layoutAlbumHeader,
+  layoutAlbumStories,
   seasonOfMonth,
-  STORY,
-  STORY_SCALES,
-  STORY_WIDTH,
   wrapParagraphs,
   wrapText,
   type MeasureFor,
-  type StoryLayout,
 } from "./month-card.ts";
 import { CARD_THEMES, contrastRatio, SEASON_COLORS } from "./month-card-theme.ts";
 import type { Entry } from "@/types/archive";
@@ -77,138 +76,71 @@ describe("문단 줄바꿈", () => {
 // 글자 크기에 비례하는 가짜 측정기: 글자 한 개의 너비 = 크기의 0.9배
 const measureFor: MeasureFor = (_kind, size) => (text) => Array.from(text).length * size * 0.9;
 
-const item = (n: number, answerLength: number, question = `질문 ${n}은 무엇인가요?`) => ({
-  dateLabel: `10월 ${n}일`,
-  question,
-  answer: "답".repeat(answerLength),
-});
-const BODY_TOP = 400;
-
-describe("카드 제목", () => {
-  it("'○○의 10월 이야기' 형태", () => {
-    assert.equal(cardTitle({ childName: "기영이", monthLabel: "10월" }), "기영이의 10월 이야기");
-  });
-
-  it("긴 별명도 두 줄 안에 들어가고 제목 영역 아래에서 본문이 시작한다", () => {
-    const long = layoutHeader(measureFor, cardTitle({ childName: "아주아주긴별명".repeat(4), monthLabel: "10월" }));
-    const short = layoutHeader(measureFor, cardTitle({ childName: "쫑", monthLabel: "10월" }));
-    assert.ok(long.titleLines.length <= 2);
-    assert.equal(short.titleLines.length, 1);
-    assert.ok(long.bodyTop > short.bodyTop);
-    for (const line of long.titleLines) assert.ok(measureFor("title", long.titleSize)(line) <= STORY_WIDTH);
-  });
-});
-
-describe("이야기 면 배치", () => {
-  const bottomOf = (layout: StoryLayout) => {
-    const last = layout.blocks[layout.blocks.length - 1];
-    const { scale } = layout;
-    return (
-      last.top +
-      last.answer.length * scale.answerLineHeight +
-      STORY.answerGap +
-      STORY.dateLineHeight +
-      STORY.dateGap +
-      last.question.length * scale.questionLineHeight
-    );
-  };
-
-  for (const count of [1, 2, 3, 4]) {
-    for (const answerLength of [10, 120, 400, 4000]) {
-      it(`기록 ${count}개·답 ${answerLength}자: 본문 영역 안에 순서대로 놓이고 줄 너비를 넘지 않는다`, () => {
-        const items = Array.from({ length: count }, (_, i) => item(i + 1, answerLength));
-        const layout = layoutStory(measureFor, items, BODY_TOP);
-        assert.ok(layout);
-        assert.ok(layout.shownCount >= 1 && layout.shownCount <= count);
-        assert.equal(layout.blocks.length, layout.shownCount);
-        // 최근 기록부터 담긴다
-        assert.deepEqual(layout.blocks.map((b) => b.dateLabel), items.slice(-layout.shownCount).map((i) => i.dateLabel));
-        let previous = BODY_TOP - 1;
-        for (const block of layout.blocks) {
-          assert.ok(block.top > previous);
-          previous = block.top;
-          for (const line of block.answer) assert.ok(measureFor("answer", layout.scale.answerSize)(line) <= layout.textWidth);
-          for (const line of block.question) assert.ok(measureFor("question", layout.scale.questionSize)(line) <= layout.textWidth);
+describe("앨범 배치와 대화 페이지", () => {
+  for (const count of [1, 2, 3, 4, 5]) {
+    it(`사진 ${count}칸은 서로 겹치지 않고 카드 안에 놓인다`, () => {
+      const frames = albumFrames(count);
+      assert.equal(frames.length, count);
+      for (const [index, frame] of frames.entries()) {
+        assert.ok(frame.x >= 0 && frame.y >= 0);
+        assert.ok(frame.x + frame.width <= 1080 && frame.y + frame.height <= 1350);
+        assert.ok(frame.height > 64);
+        for (const other of frames.slice(index + 1)) {
+          assert.ok(frame.x + frame.width <= other.x || other.x + other.width <= frame.x || frame.y + frame.height <= other.y || other.y + other.height <= frame.y);
         }
-        assert.ok(bottomOf(layout) <= STORY.bodyBottom, `bottom ${bottomOf(layout)}`);
-        // 구분선은 항목 사이에만, 블록 사이 간격 안에 있다
-        layout.blocks.forEach((block, i) => {
-          if (i === layout.blocks.length - 1) assert.equal(block.dividerY, undefined);
-          else {
-            assert.ok(block.dividerY !== undefined && block.dividerY > bottomOf({ ...layout, blocks: [block] }) - 1);
-            assert.ok(block.dividerY < layout.blocks[i + 1].top);
-          }
-        });
-      });
-    }
+      }
+      if (count === 4) assert.ok(frames.every((frame) => frame.width === frames[0].width && frame.height === frames[0].height));
+      if (count === 5) assert.ok(frames[0].width > frames[1].width);
+    });
   }
 
-  it("글을 조용히 자르지 않는다: 줄어든 답은 truncated로 알리고, 들어가면 원문 그대로다", () => {
-    const fits = layoutStory(measureFor, [item(1, 40), item(2, 40)], BODY_TOP)!;
-    assert.equal(fits.truncated, false);
-    assert.equal(fits.shownCount, 2);
-    for (const [i, block] of fits.blocks.entries()) assert.equal(block.answer.join(""), "답".repeat(40), `${i}`);
-
-    const tooLong = layoutStory(measureFor, [item(1, 4000)], BODY_TOP)!;
-    assert.equal(tooLong.truncated, true);
-    assert.equal(tooLong.scale, STORY_SCALES[STORY_SCALES.length - 1]);
+  it("긴 별명에도 제목 아래로 본문을 옮긴다", () => {
+    const long = layoutAlbumHeader(measureFor, cardTitle({ childName: "아주아주긴별명".repeat(4), monthLabel: "10월" }));
+    const short = layoutAlbumHeader(measureFor, cardTitle({ childName: "쫑", monthLabel: "10월" }));
+    assert.ok(long.bodyTop > short.bodyTop);
+    assert.ok(long.titleLines.length <= 2);
+    for (const line of long.titleLines) assert.ok(measureFor("title", long.titleSize)(line) <= ALBUM_WIDTH);
   });
 
-  it("글이 길어 여럿이 안 들어가면 오래된 기록부터 빼고, 담긴 기록은 줄이지 않는다", () => {
-    const layout = layoutStory(measureFor, [1, 2, 3, 4].map((n) => item(n, 300)), BODY_TOP)!;
-    assert.ok(layout.shownCount < 4);
-    assert.equal(layout.truncated, false);
-    for (const block of layout.blocks) assert.equal(block.answer.join(""), "답".repeat(300));
-    assert.equal(layout.blocks.at(-1)!.dateLabel, "10월 4일");
+  it("5개의 짧은 질문과 답은 한 뒷면에 날짜순으로 담긴다", () => {
+    const items = Array.from({ length: 5 }, (_, i) => ({ dateLabel: `10월 ${i + 1}일`, question: "오늘 뭐 했어?", answer: "같이 놀았어요." }));
+    const pages = layoutAlbumStories(measureFor, items, 248);
+    assert.equal(pages.length, 1);
+    assert.deepEqual(pages[0].map((block) => block.dateLabel), items.map((item) => item.dateLabel));
+    assert.ok(ALBUM.questionSize < ALBUM.answerSize);
   });
 
-  it("바닥 글자 크기(34px) 아래로는 줄이지 않는다", () => {
-    const floor = STORY_SCALES[STORY_SCALES.length - 1].answerSize;
-    assert.equal(floor, 34);
-    for (const length of [100, 300, 1000]) {
-      const layout = layoutStory(measureFor, [item(1, length), item(2, length)], BODY_TOP)!;
-      assert.ok(layout.scale.answerSize >= floor);
+  it("긴 질문과 5000자 답변도 글을 빼거나 줄이지 않고 다음 장으로 이어진다", () => {
+    const question = "질".repeat(100);
+    const answer = "답".repeat(5000);
+    const pages = layoutAlbumStories(measureFor, [{ dateLabel: "10월 1일", question, answer }], 308);
+    assert.ok(pages.length > 1);
+    assert.equal(pages.flat().flatMap((block) => block.question).join(""), question);
+    assert.equal(pages.flat().flatMap((block) => block.answer).join(""), answer);
+    assert.equal(pages[0][0].continued, false);
+    assert.ok(pages.slice(1).every((page) => page[0].continued));
+    for (const page of pages) {
+      let previous = 308;
+      for (const block of page) {
+        assert.ok(block.top >= previous);
+        assert.ok(block.bottom <= ALBUM.bodyBottom);
+        previous = block.bottom;
+      }
     }
   });
 
-  it("질문은 언제나 답보다 작고 차분하다 (답이 주인공, D-047)", () => {
-    for (const scale of STORY_SCALES) {
-      assert.ok(scale.questionSize < scale.answerSize);
-      assert.ok(scale.questionLineHeight < scale.answerLineHeight);
-    }
+  it("5개를 넘는 기록은 앞뒷면 묶음을 더 만들고 순서와 사진 연결을 유지한다", () => {
+    const items = Array.from({ length: 11 }, (_, i) => ({ dateLabel: `${i}`, question: `질문 ${i}`, answer: `답 ${i}`, photoUrl: `photo-${i}` }));
+    const groups = albumGroups(items);
+    assert.deepEqual(groups.map((group) => group.length), [5, 5, 1]);
+    assert.deepEqual(groups.flat(), items);
   });
 
-  it("기록이 적을수록 글자가 크다 (1개 > 2개 > 3개 ≥ 4개)", () => {
-    const sizeOf = (count: number) =>
-      layoutStory(measureFor, Array.from({ length: count }, (_, i) => item(i + 1, 10)), BODY_TOP)!.scale.answerSize;
-    assert.ok(sizeOf(1) > sizeOf(2));
-    assert.ok(sizeOf(2) > sizeOf(3));
-    assert.ok(sizeOf(3) >= sizeOf(4));
-  });
-
-  it("짧은 기록 하나는 인용 카드로 크게, 원문 그대로 전부 보인다", () => {
-    const layout = layoutStory(measureFor, [{ dateLabel: "10월 27일", question: "오늘 뭐 하고 놀았어?", answer: "블록으로 높은 탑을 쌓았어요." }], BODY_TOP)!;
-    assert.equal(layout.truncated, false);
-    assert.equal(layout.shownCount, 1);
-    assert.equal(layout.scale.answerSize, 64);
-    assert.equal(layout.textWidth, STORY_WIDTH - STORY.quoteIndent);
-    assert.equal(layout.blocks[0].answer.join(" "), "블록으로 높은 탑을 쌓았어요.");
-  });
-
-  it("줄바꿈이 있는 답은 줄을 살려서 놓는다", () => {
-    const layout = layoutStory(measureFor, [{ dateLabel: "10월 27일", question: "질문", answer: "첫 줄\n\n둘째 줄" }], BODY_TOP)!;
-    assert.deepEqual(layout.blocks[0].answer, ["첫 줄", "둘째 줄"]);
-  });
-
-  it("기록이 없으면 배치가 없다", () => {
-    assert.equal(layoutStory(measureFor, [], BODY_TOP), null);
-  });
-
-  it("긴 질문(6줄 초과)도 넘치지 않고 줄었음을 알린다", () => {
-    const layout = layoutStory(measureFor, [item(1, 10, "아주 아주 긴 질문 ".repeat(60))], BODY_TOP)!;
-    assert.ok(layout.blocks[0].question.length <= STORY.maxQuestionLines);
-    assert.equal(layout.truncated, true);
-    assert.ok(bottomOf(layout) <= STORY.bodyBottom);
+  it("엔터와 가족 이모지를 보존하고 여러 기록의 답을 모두 담는다", () => {
+    const items = [{ dateLabel: "1일", question: "질문", answer: "👨‍👩‍👧".repeat(40) + "\n둘째 줄" }, { dateLabel: "2일", question: "다른 질문", answer: "끝" }];
+    const blocks = layoutAlbumStories(measureFor, items, 248).flat();
+    assert.equal(blocks.filter((block) => block.dateLabel === "1일").flatMap((block) => block.answer).join(""), "👨‍👩‍👧".repeat(40) + "둘째 줄");
+    assert.equal(blocks.at(-1)?.answer.at(-1), "끝");
   });
 });
 
@@ -246,30 +178,23 @@ describe("월별 이야기 카드 만들기", () => {
     assert.equal(buildMonthCard({ ...base, chapter: chapterOf([entries[6]]) }), null);
   });
 
-  it(`이야기 면 후보는 그 달 최근 ${MAX_CARD_ITEMS}개가 오래된 순으로 들어간다`, () => {
+  it("그 달의 모든 기록이 오래된 순으로 들어간다", () => {
     const card = buildMonthCard({ ...base, chapter: chapterOf(entries) });
     assert.ok(card);
-    assert.deepEqual(card.items.map((i) => i.answer), ["답 3", "답 4", "답 5", "답 6"]);
+    assert.deepEqual(card.items.map((i) => i.answer), ["답 1", "답 2", "답 3", "답 4", "답 5", "답 6"]);
     // 날짜는 작성일(KST): 2026-10-19T03:00Z → 10월 19일
-    assert.deepEqual(card.items.map((i) => i.dateLabel), ["10월 19일", "10월 26일", "10월 28일", "10월 30일"]);
+    assert.deepEqual(card.items.map((i) => i.dateLabel), ["10월 5일", "10월 12일", "10월 19일", "10월 26일", "10월 28일", "10월 30일"]);
     assert.equal(card.entryCount, 6);
     assert.equal(card.monthLabel, "10월");
     assert.equal(card.yearLabel, "2026");
   });
 
-  it("사진 면은 그 달의 사진이 있으면 가장 최근 사진과 그 기록 날짜, 다른 달 사진은 쓰지 않는다", () => {
+  it("각 기록의 첫 사진과 날짜를 연결하고, 사진이 없는 기록도 남긴다", () => {
     const card = buildMonthCard({ ...base, chapter: chapterOf(entries) });
-    assert.deepEqual(card?.photo, { url: "https://example.test/a.jpg", dateLabel: "10월 12일" });
-    const later = buildMonthCard({
-      ...base,
-      chapter: chapterOf([...entries, entry("7", "2026-10-31T03:00:00Z", "https://example.test/b.jpg")]),
-    });
-    assert.deepEqual(later?.photo, { url: "https://example.test/b.jpg", dateLabel: "10월 31일" });
-  });
-
-  it("사진이 없으면 사진 면이 없다 (빈 면을 만들지 않는다)", () => {
-    const noPhoto = [entry("1", "2026-10-05T03:00:00Z"), entry("2", "2026-10-12T03:00:00Z")];
-    assert.equal(buildMonthCard({ ...base, chapter: chapterOf(noPhoto) })?.photo, null);
+    assert.equal(card?.items[1].photoUrl, "https://example.test/a.jpg");
+    assert.equal(card?.items[1].dateLabel, "10월 12일");
+    assert.equal(card?.items[0].photoUrl, undefined);
+    assert.ok(card?.items.every((item) => item.photoUrl !== "https://example.test/old.jpg"));
   });
 
   it("나이는 끝난 달이면 그 달 마지막 날, 진행 중이면 오늘 기준", () => {

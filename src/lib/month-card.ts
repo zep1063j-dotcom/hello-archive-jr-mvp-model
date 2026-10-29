@@ -1,6 +1,6 @@
 // 월별 이야기 카드의 순수 규칙 (D-029, D-048). Next.js·브라우저에 묶이지 않는 순수 TS (D-015).
-//  - 이야기 면: 그 달 기록 중 최근 몇 개의 답·날짜·질문. 아이의 답이 가장 크고, 질문은 작고 차분하게 둔다.
-//  - 사진 면: 그 달에 올린 사진이 있으면 가장 최근 사진 한 장과 날짜. 사진이 없으면 사진 면 자체가 없다(빈 면을 저장하게 하지 않는다).
+//  - 앞면은 날짜·사진 앨범, 뒷면은 같은 기록의 날짜·질문·답 목록이다.
+//  - 다섯 기록씩 묶고, 긴 글은 뒷면을 추가해 원문을 모두 담는다.
 //  - 카드는 부모의 기기에서 그려지고 서버로 올라가지 않는다. 이 파일은 "무엇을 어디에 놓는가"만 정한다.
 import { addDays, formatAge, toKstDateKey } from "./date.ts";
 import type { Chapter } from "./chapters.ts";
@@ -9,13 +9,11 @@ import type { Chapter } from "./chapters.ts";
 export const CARD_WIDTH = 1080;
 export const CARD_HEIGHT = 1350;
 
-/** 이야기 면에 담을 수 있는 기록의 최대 수. 글이 길면 이보다 적게(최근 것부터) 담긴다. */
-export const MAX_CARD_ITEMS = 4;
+/** 앨범 한 묶음(앞면 + 뒷면)에 담는 기록 수. */
+export const MAX_CARD_ITEMS = 5;
 
 /** `dateLabel`은 기록을 쓴 날(KST)의 "10월 27일" 형태 */
-export type MonthCardItem = { dateLabel: string; question: string; answer: string };
-
-export type MonthCardPhoto = { url: string; dateLabel: string };
+export type MonthCardItem = { dateLabel: string; question: string; answer: string; photoUrl?: string };
 
 export type Season = "spring" | "summer" | "autumn" | "winter";
 
@@ -37,10 +35,8 @@ export type MonthCardModel = {
   childName: string;
   /** "만 4세 5개월" (그 달 마지막 날, 진행 중인 달은 오늘 기준) */
   ageLabel: string;
-  /** 이야기 면 후보: 그 달 최근 기록 (오래된 순). 실제로 몇 개가 담기는지는 글 길이에 따라 배치가 정한다. */
+  /** 그 달의 모든 기록, 오래된 순. 사진과 대화가 같은 순서를 쓴다. */
   items: MonthCardItem[];
-  /** 사진 면. 그 달에 올린 사진이 없으면 null */
-  photo: MonthCardPhoto | null;
   /** 그 달 기록 수 */
   entryCount: number;
 };
@@ -57,7 +53,7 @@ export function cardTitle(model: Pick<MonthCardModel, "childName" | "monthLabel"
 
 /**
  * 챕터(한 달)로 카드를 만든다. 기록이 없으면 null.
- * 이야기 면 후보는 최근 기록(오래된 순), 사진 면은 사진이 있는 가장 최근 기록의 첫 사진.
+ * 모든 기록을 오래된 순으로 담으며, 각 기록의 첫 사진을 앞면에 쓴다.
  * 달·계절은 챕터의 시작월에서 오므로 과거 카드를 오늘 다시 만들어도 그 달 그대로다.
  */
 export function buildMonthCard(input: {
@@ -69,17 +65,12 @@ export function buildMonthCard(input: {
   const { chapter, childName, birthDate, today } = input;
   if (chapter.entries.length === 0) return null;
 
-  const items = chapter.entries.slice(-MAX_CARD_ITEMS).map((entry) => ({
+  const items = chapter.entries.map((entry) => ({
     dateLabel: koreanMonthDay(toKstDateKey(entry.createdAt)),
     question: entry.question.body,
     answer: entry.body,
+    photoUrl: entry.photos[0]?.url,
   }));
-
-  // chapter.entries는 오래된 순이라 뒤에서부터 사진이 있는 기록을 찾는다.
-  const withPhoto = [...chapter.entries].reverse().find((entry) => entry.photos.length > 0);
-  const photo = withPhoto
-    ? { url: withPhoto.photos[0].url, dateLabel: koreanMonthDay(toKstDateKey(withPhoto.createdAt)) }
-    : null;
 
   const ageAt = chapter.isOpen ? today : addDays(chapter.end, -1);
   return {
@@ -89,7 +80,6 @@ export function buildMonthCard(input: {
     childName,
     ageLabel: formatAge(birthDate, ageAt),
     items,
-    photo,
     entryCount: chapter.entries.length,
   };
 }
@@ -177,178 +167,98 @@ export function wrapParagraphs(measure: MeasureText, text: string, maxWidth: num
 /** 글자 종류·크기별 너비 측정기. 제목(굵게)·질문·답의 글꼴이 달라 종류와 크기를 받는다. */
 export type MeasureFor = (kind: "title" | "question" | "answer", size: number) => MeasureText;
 
-/** 줄이 "…"로 끝났는데 원문은 그렇지 않으면 글이 줄어든 것이다. */
-function wasCut(lines: string[], text: string): boolean {
-  const last = lines.at(-1);
-  return last !== undefined && last.endsWith("…") && !text.trimEnd().endsWith("…");
-}
-
-/** 이야기 면 배치 상수 (px, 1080×1350 기준). 그리는 코드와 배치 계산이 같은 값을 쓴다. */
-export const STORY = {
-  margin: 88,
-  /** 본문이 끝나는 y. 아래는 하단 브랜드 자리 */
-  bodyBottom: 1214,
-  /** 기록이 1개일 때 인용 막대 때문에 글을 안쪽으로 들이는 만큼 */
-  quoteIndent: 36,
-  /** 답 → 날짜 → 질문 사이 */
-  answerGap: 24,
-  dateLineHeight: 34,
-  dateGap: 6,
-  /** 기록이 여럿일 때 항목 사이 간격(가운데에 구분선) */
-  gapMin: 60,
-  gapMax: 100,
-  maxQuestionLines: 6,
+/** 앨범 안쪽은 종이 여백을 두되, 이미지와 사진 틀의 모서리는 모두 직각이다. */
+export const ALBUM = {
+  margin: 64, bodyBottom: 1220, answerSize: 48, answerLineHeight: 66,
+  questionSize: 28, questionLineHeight: 42, dateLineHeight: 32,
+  dateGap: 12, answerGap: 12, blockGap: 30,
 } as const;
+export const ALBUM_WIDTH = CARD_WIDTH - ALBUM.margin * 2;
 
-export const STORY_WIDTH = CARD_WIDTH - STORY.margin * 2;
+export type AlbumFrame = { x: number; y: number; width: number; height: number };
 
-// ---- 제목 영역 ----
-
-const TITLE_SIZES = [60, 52, 44] as const;
-
-export type HeaderLayout = {
-  titleLines: string[];
-  titleSize: number;
-  titleLineHeight: number;
-  /** 첫 제목 줄의 위 y */
-  titleTop: number;
-  /** 나이 글자의 가운데 y */
-  ageY: number;
-  /** 짧은 포인트 선의 위 y */
-  ruleY: number;
-  /** 본문(답)이 시작하는 y */
-  bodyTop: number;
-};
-
-/** "기영이의 10월 이야기" 제목: 한 줄에 안 들어가면 두 줄, 그래도 길면 글자를 한 단계씩 줄인다. */
-export function layoutHeader(measureFor: MeasureFor, title: string): HeaderLayout {
-  let titleSize: number = TITLE_SIZES[0];
-  let titleLines: string[] = [];
-  for (const size of TITLE_SIZES) {
-    titleSize = size;
-    titleLines = wrapText(measureFor("title", size), title, STORY_WIDTH, 2);
-    if (!wasCut(titleLines, title)) break;
-  }
-  const titleLineHeight = Math.round(titleSize * 1.3);
-  const titleTop = 168;
-  const titleBottom = titleTop + titleLines.length * titleLineHeight;
-  const ageY = titleBottom + 30;
-  const ruleY = ageY + 40;
-  return { titleLines, titleSize, titleLineHeight, titleTop, ageY, ruleY, bodyTop: ruleY + 6 + 60 };
+/** 4개는 2×2, 5개는 위에 큰 사진 1개와 아래에 작은 사진 4개. */
+export function albumFrames(count: number): AlbumFrame[] {
+  const gap = 20;
+  const x = ALBUM.margin;
+  const y = 64;
+  const width = ALBUM_WIDTH;
+  const height = 1222;
+  const half = (width - gap) / 2;
+  if (count < 1 || count > MAX_CARD_ITEMS) return [];
+  if (count === 1) return [{ x, y, width, height }];
+  if (count === 2) return [0, 1].map((i) => ({ x, y: y + i * (height + gap) / 2, width, height: (height - gap) / 2 }));
+  const topHeight = count === 5 ? 470 : count === 3 ? 600 : (height - gap) / 2;
+  if (count === 4) return [0, 1, 2, 3].map((i) => ({
+    x: x + (i % 2) * (half + gap), y: y + Math.floor(i / 2) * (topHeight + gap), width: half, height: topHeight,
+  }));
+  const rows = count === 5 ? 2 : 1;
+  const smallHeight = (height - topHeight - gap * rows) / rows;
+  return [{ x, y, width, height: topHeight }, ...Array.from({ length: count - 1 }, (_, i) => ({
+    x: x + (i % 2) * (half + gap), y: y + topHeight + gap + Math.floor(i / 2) * (smallHeight + gap),
+    width: half, height: smallHeight,
+  }))];
 }
 
-// ---- 본문(기록) 영역 ----
+export function albumGroups(items: MonthCardItem[]): MonthCardItem[][] {
+  const groups: MonthCardItem[][] = [];
+  for (let i = 0; i < items.length; i += MAX_CARD_ITEMS) groups.push(items.slice(i, i + MAX_CARD_ITEMS));
+  return groups;
+}
 
-/** 글자 크기·줄 높이. 질문은 언제나 답보다 작고 차분하게 둔다: 시간이 지나 소중해지는 것은 아이의 말이다 (D-047). */
-export type StoryScale = {
-  answerSize: number;
-  answerLineHeight: number;
-  questionSize: number;
-  questionLineHeight: number;
+export function layoutAlbumHeader(measureFor: MeasureFor, title: string) {
+  const titleSize = 46;
+  const titleLines = wrapText(measureFor("title", titleSize), title, ALBUM_WIDTH, 2);
+  return { titleSize, titleLines, bodyTop: 188 + titleLines.length * 60 };
+}
+
+export type AlbumStoryBlock = {
+  dateLabel: string; question: string[]; answer: string[]; continued: boolean; top: number; bottom: number;
 };
 
-// 앞쪽이 크다. 가장 작은 크기(34px)가 바닥이다: 그보다 작게 줄이지 않고, 안 들어가면 기록을 줄여서 담는다.
-export const STORY_SCALES: readonly StoryScale[] = [
-  { answerSize: 64, answerLineHeight: 94, questionSize: 28, questionLineHeight: 42 },
-  { answerSize: 56, answerLineHeight: 82, questionSize: 27, questionLineHeight: 40 },
-  { answerSize: 48, answerLineHeight: 70, questionSize: 26, questionLineHeight: 38 },
-  { answerSize: 44, answerLineHeight: 64, questionSize: 26, questionLineHeight: 38 },
-  { answerSize: 40, answerLineHeight: 58, questionSize: 25, questionLineHeight: 36 },
-  { answerSize: 36, answerLineHeight: 52, questionSize: 24, questionLineHeight: 35 },
-  { answerSize: 34, answerLineHeight: 50, questionSize: 24, questionLineHeight: 35 },
-];
-
-/** 담는 기록 수(1~4)별로 시작하는 글자 크기의 인덱스. 기록이 적을수록 크게 시작한다. */
-const START_SCALE = [0, 2, 4, 5] as const;
-
-export type StoryBlock = {
-  answer: string[];
-  question: string[];
-  dateLabel: string;
-  /** 블록 맨 위 y (답 첫 줄의 위) */
-  top: number;
-  /** 이 블록 아래의 구분선 y (마지막 블록은 없음) */
-  dividerY?: number;
-};
-
-export type StoryLayout = {
-  scale: StoryScale;
-  /** 글이 들어갈 너비. 기록이 1개면 인용 막대 때문에 조금 좁다 */
-  textWidth: number;
-  blocks: StoryBlock[];
-  /** 카드에 담긴 기록 수 (최근 것부터) */
-  shownCount: number;
-  /** 긴 글이 "…"로 줄어 다 담기지 않았다 (기록이 1개이고 가장 작은 글자로도 안 들어갈 때만) */
-  truncated: boolean;
-};
-
-/**
- * 이야기 면의 줄과 위치를 정한다. 글을 줄이지 않고 담는 것이 우선이다:
- *  1) 최근 기록 `MAX_CARD_ITEMS`개부터, 기록 수에 맞는 글자 크기에서 시작해 한 단계씩 줄여 가며 전부 들어갈 때까지 맞춘다.
- *  2) 가장 작은 글자(바닥)로도 안 들어가면 가장 오래된 기록부터 빼고 다시 맞춘다(`shownCount`로 알린다).
- *  3) 기록 1개도 안 들어갈 만큼 길 때만 답을 "…"로 줄이고 `truncated`로 알린다.
- * 남는 공간은 항목 사이 간격으로 나눈다(구분선은 간격의 가운데).
- */
-export function layoutStory(
-  measureFor: MeasureFor,
-  allItems: MonthCardItem[],
-  bodyTop: number,
-): StoryLayout | null {
-  if (allItems.length === 0) return null;
-  const area = STORY.bodyBottom - bodyTop;
-
-  for (let count = Math.min(allItems.length, MAX_CARD_ITEMS); count >= 1; count -= 1) {
-    const items = allItems.slice(-count);
-    const textWidth = count === 1 ? STORY_WIDTH - STORY.quoteIndent : STORY_WIDTH;
-    const gaps = count - 1;
-
-    for (let index = START_SCALE[count - 1]; index < STORY_SCALES.length; index += 1) {
-      const scale = STORY_SCALES[index];
-      const lastScale = index === STORY_SCALES.length - 1;
-      const fixed = STORY.answerGap + STORY.dateLineHeight + STORY.dateGap;
-      const questionMeasure = measureFor("question", scale.questionSize);
-      const answerMeasure = measureFor("answer", scale.answerSize);
-      const questions = items.map((item) =>
-        wrapParagraphs(questionMeasure, item.question, textWidth, STORY.maxQuestionLines),
-      );
-      const questionsHeight = questions.reduce((sum, lines) => sum + lines.length * scale.questionLineHeight, 0);
-      // 답에 쓸 수 있는 줄 수: 한 블록에 줄 수가 넘치면 그 크기는 실패, 1개이고 바닥 크기면 남은 줄만 쓴다.
-      const answerBudget = Math.floor((area - gaps * STORY.gapMin - questionsHeight - count * fixed) / scale.answerLineHeight);
-      const cutToFit = count === 1 && lastScale;
-      if (answerBudget < count && !cutToFit) continue;
-
-      const answers = items.map((item) =>
-        wrapParagraphs(answerMeasure, item.answer, textWidth, Math.max(answerBudget, 1) + 1),
-      );
-      const answerLines = answers.reduce((sum, lines) => sum + lines.length, 0);
-      if (answerLines > answerBudget && !cutToFit) continue;
-
-      // 바닥 크기에서 기록 1개: 남는 줄만큼만 담고 줄인다.
-      const fitted = cutToFit ? [wrapParagraphs(answerMeasure, items[0].answer, textWidth, Math.max(answerBudget, 1))] : answers;
-      const heights = items.map(
-        (_, i) =>
-          fitted[i].length * scale.answerLineHeight + fixed + questions[i].length * scale.questionLineHeight,
-      );
-      const total = heights.reduce((sum, height) => sum + height, 0);
-      const gap = gaps === 0 ? 0 : Math.min(STORY.gapMax, Math.max(STORY.gapMin, (area - total) / gaps));
-      // 기록이 1개면 인용 카드답게 본문 영역의 윗부분(약 35% 지점)에 놓아 아래가 휑하지 않게 한다.
-      let top = bodyTop + (count === 1 ? Math.floor((area - total) * 0.35) : 0);
-      const blocks = items.map((item, i): StoryBlock => {
-        const block: StoryBlock = {
-          answer: fitted[i],
-          question: questions[i],
-          dateLabel: item.dateLabel,
-          top,
-          dividerY: i < gaps ? top + heights[i] + gap / 2 : undefined,
-        };
-        top += heights[i] + gap;
-        return block;
-      });
-      const truncated = blocks.some(
-        (block, i) => wasCut(block.answer, items[i].answer) || wasCut(block.question, items[i].question),
-      );
-      return { scale, textWidth, blocks, shownCount: count, truncated };
-    }
+/** 가장 작은 글씨로 억지로 줄이거나 기록을 빼지 않고, 다음 뒷면으로 이어 쓴다. */
+export function layoutAlbumStories(measureFor: MeasureFor, items: MonthCardItem[], bodyTop: number): AlbumStoryBlock[][] {
+  const pages: AlbumStoryBlock[][] = [];
+  let page: AlbumStoryBlock[] = [];
+  let y = bodyTop;
+  const nextPage = () => {
+    if (page.length) pages.push(page);
+    page = [];
+    y = bodyTop;
+  };
+  // 제목 영역이 잘못됐을 때 무한히 빈 페이지를 만들지 않는다.
+  if (ALBUM.bodyBottom - bodyTop < 160) throw new Error("album-body-too-small");
+  for (const item of items) {
+    const question = wrapParagraphs(measureFor("question", ALBUM.questionSize), item.question, ALBUM_WIDTH, Number.MAX_SAFE_INTEGER);
+    const answer = wrapParagraphs(measureFor("answer", ALBUM.answerSize), item.answer, ALBUM_WIDTH, Number.MAX_SAFE_INTEGER);
+    const fullHeight = ALBUM.dateLineHeight + ALBUM.dateGap + question.length * ALBUM.questionLineHeight + ALBUM.answerGap + answer.length * ALBUM.answerLineHeight;
+    if (page.length && y + fullHeight > ALBUM.bodyBottom) nextPage();
+    let qi = 0;
+    let ai = 0;
+    let continued = false;
+    do {
+      if (ALBUM.bodyBottom - y < 140) nextPage();
+      const block: AlbumStoryBlock = { dateLabel: item.dateLabel, question: [], answer: [], continued, top: y, bottom: y };
+      y += ALBUM.dateLineHeight + ALBUM.dateGap;
+      while (qi < question.length && y + ALBUM.questionLineHeight <= ALBUM.bodyBottom) {
+        block.question.push(question[qi++]);
+        y += ALBUM.questionLineHeight;
+      }
+      const answerTop = y + (block.question.length ? ALBUM.answerGap : 0);
+      if (qi === question.length && answerTop + ALBUM.answerLineHeight <= ALBUM.bodyBottom) {
+        y = answerTop;
+        while (ai < answer.length && y + ALBUM.answerLineHeight <= ALBUM.bodyBottom) {
+          block.answer.push(answer[ai++]);
+          y += ALBUM.answerLineHeight;
+        }
+      }
+      block.bottom = y;
+      page.push(block);
+      y += ALBUM.blockGap;
+      continued = true;
+      if (qi < question.length || ai < answer.length) nextPage();
+    } while (qi < question.length || ai < answer.length);
   }
-  return null;
+  nextPage();
+  return pages;
 }

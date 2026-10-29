@@ -22,38 +22,33 @@ export function MonthCardCarousel({ cards }: { cards: CarouselCard[] }) {
       <ul className="-mx-5 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-5 px-5 pb-2 md:-mx-6 md:scroll-px-6 md:px-6 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
         {cards.map(({ key, isOpen, model }) => {
           const theme = CARD_THEMES[seasonOfMonth(model.month)];
-          const latest = model.items[model.items.length - 1];
+          const items = model.items.slice(0, 5);
           return (
             <li key={key} className="w-40 shrink-0 snap-start sm:w-44">
               <Link
                 href={`/archive/card/${key}`}
                 transitionTypes={["nav-forward"]}
                 aria-label={`${cardTitle(model)}, ${model.yearLabel}년, 기록 ${model.entryCount}개${isOpen ? ", 진행 중" : ""}`}
-                className="flex aspect-[4/5] flex-col justify-between rounded-[1.75rem] p-4 shadow-[0_2px_10px_rgb(0_0_0/0.12)] transition-transform active:scale-[0.98]"
-                style={{ backgroundColor: theme.background, color: theme.ink }}
+                className="block shadow-[0_2px_10px_rgb(0_0_0/0.12)] transition-transform active:scale-[0.98]"
+                style={{ backgroundColor: theme.photoBackground, color: theme.ink }}
               >
-                <span className="flex items-start justify-between gap-2">
-                  <span className="text-[11px] font-semibold tracking-wide" style={{ color: theme.soft }}>
-                    {model.yearLabel}년 {model.monthLabel}
+                <span className="flex aspect-[4/5] flex-col gap-2 p-3">
+                  <span className="grid min-h-0 flex-1 grid-cols-2 gap-1.5" style={{ gridTemplateRows: items.length === 5 ? "1.4fr 1fr 1fr" : items.length === 1 ? "1fr" : "repeat(2, minmax(0, 1fr))" }}>
+                    {items.map((item, index) => (
+                      <span key={index} className={`flex min-h-0 flex-col ${items.length === 1 || items.length === 2 || ((items.length === 3 || items.length === 5) && index === 0) ? "col-span-2" : ""}`}>
+                        <span className="relative block min-h-0 flex-1 overflow-hidden" style={{ backgroundColor: theme.background }}>
+                          {/* 서명 URL을 그대로 쓴다. 축소 미리보기이며 파일은 비공개 Storage에 있다. */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          {item.photoUrl && <img src={item.photoUrl} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover object-[center_35%]" />}
+                        </span>
+                        <span className="py-0.5 text-[8px]" style={{ color: theme.soft }}>{item.dateLabel}</span>
+                      </span>
+                    ))}
                   </span>
-                  {isOpen && (
-                    <span
-                      className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                      style={{ backgroundColor: theme.accent, color: theme.background }}
-                    >
-                      진행 중
-                    </span>
-                  )}
                 </span>
-                <span className="flex flex-col gap-2">
-                  <span className="line-clamp-2 font-serif text-[13px] leading-snug font-bold">{cardTitle(model)}</span>
-                  <span aria-hidden className="h-[3px] w-6 rounded-full" style={{ backgroundColor: theme.accent }} />
-                  {/* 가장 최근 기록의 답: 카드에서도 아이의 말이 가장 크게 보인다 */}
-                  <span className="line-clamp-4 font-serif text-[15px] leading-snug font-semibold">{latest.answer}</span>
-                </span>
-                <span className="flex items-center justify-between gap-2 text-[11px]" style={{ color: theme.mute }}>
-                  <span className="min-w-0 truncate">{latest.dateLabel}</span>
-                  <span className="shrink-0">기록 {model.entryCount}개</span>
+                <span className="flex flex-col gap-1 border-t px-3 py-2" style={{ borderColor: theme.line }}>
+                  <span className="truncate font-serif text-[12px] font-semibold">{cardTitle(model)}</span>
+                  <span className="text-[10px]" style={{ color: theme.mute }}>{model.yearLabel}년 · 기록 {model.entryCount}개{isOpen ? " · 진행 중" : ""}</span>
                 </span>
               </Link>
             </li>
