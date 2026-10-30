@@ -14,12 +14,17 @@ const nextConfig: NextConfig = {
     // `instant`를 직접 내보낸 화면만 검증한다 (docs: guides/instant-navigation).
     instantInsights: { validationLevel: "manual-warning" },
   },
-  // 기본 보안 헤더 (SESSION 08). CSP는 인라인 스크립트 영향 검증이 필요해 아직 넣지 않았다.
+  // 기본 보안 헤더 (SESSION 08). 스크립트를 제한하는 CSP(script-src)는 인라인 스크립트·GA 영향 검증이 필요해 아직 넣지 않았다.
+  // 대신 스크립트와 무관한 지시어만 먼저 둔다: 다른 사이트의 프레임 삽입 금지, <base>·폼 전송 대상을 같은 주소로 고정, 플러그인 금지.
   async headers() {
     return [
       {
         source: "/:path*",
         headers: [
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+          },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

@@ -368,6 +368,13 @@
 - 후속: 로고(상단·로그인·약관)와 온보딩 환영·완료 창에서 큰 "h·" 표시를 뺐다(글자 로고 "Hello Archive jr" + BETA만 남김). 파비콘은 책 모양으로 바꿨다(`icon.svg`·`apple-icon.png`·`favicon.ico`). 아이콘은 브라우저·홈 화면 캐시 때문에 바뀌는 데 시간이 걸릴 수 있다.
 - 이번 디자인 변경은 로컬 커밋만 했고(push·정식 배포 안 함), 실제 휴대폰·스크린리더는 이번에 확인하지 않았다.
 
+## D-052 · 2026-10-30 · 보안 점검 (코드·DB·공개 저장소) — 결과와 남은 확인
+- 점검 범위: 서버 액션 10개(로그인·기록·사진·자녀·질문 선택·연간 답·설정·온보딩·관심 표시·수신 거부)의 인증·소유권·검증, 크론 라우트, 수신 거부 서명, 로그인 복귀 경로, proxy, RLS·컬럼 GRANT·Storage 정책·함수(search_path), XSS 싱크, 비밀키 사용처·git 이력, 분석(GA) 범위, 응답 헤더, `npm audit`.
+- 확인한 것(문제 없음): 모든 서버 액션이 `requireUser()`로 시작하고(로그인·수신 거부는 의도적 예외) 쓰기는 `user_id` 조건과 RLS 양쪽으로 막는다. DB는 컬럼 단위 GRANT·RLS·길이 체크를 갖췄고 `email_deliveries`는 일반 사용자 권한이 없다. 사진은 서버가 매직 바이트로 다시 확인하고 버킷은 비공개·5MB·이미지 3종. `safeNextPath`가 열린 리다이렉트를 막는다. service role은 크론·수신 거부 두 곳에서만 쓴다. `dangerouslySetInnerHTML`·`eval` 없음, 메일 본문은 이스케이프. git 이력에서 키·`.env`·샘플 계정 파일 없음. `npm audit` 0건. GA는 공개 4개 화면만 측정.
+- 테스트(개발 DB): 단위 173, RLS 25, children 7, entries 16, photos 6, interests 8, yearly 6, choices 8, weekly-email 15 모두 통과.
+- 변경: `next.config.ts`에 `Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'` 추가(스크립트를 제한하지 않는 지시어만). 개발 서버에서 온보딩 저장·수신 설정 폼(전송 후 리다이렉트)과 콘솔 오류 없음을 확인했다. 실제 배포 환경은 확인하지 않았다.
+- 사용자가 확인·결정할 것(코드 밖): ① GitHub 저장소가 공개(비로그인 접근 200)다 — 비공개 전환 검토. ② Supabase 정식 프로젝트의 로그인 보호(Authentication): Email OTP 만료 시간 단축, 이메일 발송·로그인 요청 한도, CAPTCHA(Turnstile) — 가입이 열려 있어 누구나 아무 주소로 코드 메일을 유발할 수 있고 한도를 소진하면 정상 로그인이 막힌다. ③ 정식 DB의 `photos` 버킷 설정(크기 5MB·MIME)이 마이그레이션과 같은지(`on conflict do nothing`이라 기존 버킷은 바뀌지 않는다). ④ Storage에는 사용자별 파일 개수·용량 상한이 없어 직접 업로드로 용량을 채울 수 있다(낮은 위험, 사용자 증가 전에 정책으로 상한 검토). ⑤ `script-src` CSP는 미적용(GA·인라인 스크립트 검증 필요). ⑥ `CRON_SECRET`은 수신 거부 서명 키를 겸하므로 길고 무작위여야 하고, 바꾸면 이미 나간 메일의 수신 거부 링크가 무효가 된다.
+
 ## D-053 · 2026-10-30 · 링크 공유 미리보기 이미지와 메타데이터
 - 사용자 요청으로 1200×630 PNG(`src/app/opengraph-image.png`, 약 57KB)를 만들었다. 종이색·적갈색·기존 명조 글꼴로 브랜드 문구와 가상의 기록 예시를 구성했다. 실제 자녀 정보·기록·사진은 사용하지 않는다. 편집용 벡터 원본은 `assets/brand/link-preview.svg`다.
 - 루트 layout에 Open Graph 제목·설명·사이트명·한국어 locale·website 유형과 Twitter 큰 이미지 카드 설정을 넣었다. 이미지와 대체 문구는 Next.js 파일 메타데이터 규칙으로 연결한다. 절대 주소 기준은 기존 `NEXT_PUBLIC_APP_URL`이고, 없으면 정식 도메인(`https://archivejr.helloblank.net`)을 쓴다.
