@@ -14,8 +14,29 @@ const notoSerifKr = Noto_Serif_KR({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://archivejr.helloblank.net"),
   title: "Hello Archive jr",
   description: "매주 한 가지 질문으로 아이의 말과 생각을 기록합니다.",
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    siteName: "Hello Archive jr",
+    title: "Hello Archive jr · 아이의 생각을 모으는 곳",
+    description: "오늘의 한마디를, 내일도 기억할 수 있게. 매주 하나의 질문으로 아이의 말과 일상을 남깁니다.",
+    url: "/",
+    // 이미지는 같은 폴더의 opengraph-image.png에서 자동으로 연결한다.
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Hello Archive jr · 아이의 생각을 모으는 곳",
+    description: "오늘의 한마디를, 내일도 기억할 수 있게. 매주 하나의 질문으로 아이의 말과 일상을 남깁니다.",
+    images: [{
+      url: "/opengraph-image.png",
+      width: 1200,
+      height: 630,
+      alt: "Hello Archive jr — 오늘의 한마디를, 내일도 기억할 수 있게.",
+    }],
+  },
 };
 
 export const viewport: Viewport = {
